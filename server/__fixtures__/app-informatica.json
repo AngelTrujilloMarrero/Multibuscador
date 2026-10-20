@@ -1,0 +1,32 @@
+[
+  {
+    "productName": "Teclado Logitech K120",
+    "link": "https://appinformatica.vtexcommercestable.com.br/teclado-logitech-k120/p",
+    "categories": ["/Periféricos/Teclados/"],
+    "items": [
+      {
+        "images": [
+          {
+            "imageUrl": "https://pcbox.vteximg.com.br/arquivos/ids/1/teclado.jpg"
+          }
+        ],
+        "sellers": [
+          { "commertialOffer": { "Price": 14.99, "IsAvailable": true } },
+          { "commertialOffer": { "Price": 12.99, "IsAvailable": true } },
+          { "commertialOffer": { "Price": 9.99, "IsAvailable": false } }
+        ]
+      }
+    ]
+  },
+  {
+    "productName": "Producto sin stock",
+    "link": "https://appinformatica.vtexcommercestable.com.br/sin-stock/p",
+    "items": [
+      {
+        "sellers": [
+          { "commertialOffer": { "Price": 5, "IsAvailable": false } }
+        ]
+      }
+    ]
+  }
+]

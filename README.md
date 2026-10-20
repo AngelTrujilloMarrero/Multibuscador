@@ -78,6 +78,14 @@ La API Express queda expuesta en `/api` del mismo dominio y la web se sirve
 desde `dist`. No se necesitan proxies: las cinco tiendas consultadas no bloquean
 el acceso desde Vercel.
 
+La caché compartida (KV/Upstash) es opcional pero recomendable: reduce las
+llamadas a las tiendas y comparte resultados entre instancias.
+
+> El plan Hobby de Vercel limita las funciones serverless a 10 s. La búsqueda
+> paralela de las cinco tiendas suele terminar en 1-3 s; si una tienda va lenta,
+> su tarjeta saldrá como "tardó demasiado" sin afectar a las demás. Si necesitas
+> más margen, sube a Pro o baja `REQUEST_TIMEOUT_MS` en `search-service.ts`.
+
 ### Local
 
 ```bash

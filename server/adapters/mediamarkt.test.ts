@@ -1,30 +1,44 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseMediaMarkt } from './mediamarkt';
+import { parseMediaMarktCanarias } from './mediamarkt';
 
-const html = readFileSync(
-  new URL('../__fixtures__/mediamarkt.html', import.meta.url),
-  'utf8'
+const data: unknown = JSON.parse(
+  readFileSync(
+    new URL('../__fixtures__/mediamarkt-canarias.json', import.meta.url),
+    'utf8'
+  )
 );
 
-describe('parseMediaMarkt', () => {
-  it('extrae el ItemList de JSON-LD', () => {
-    const products = parseMediaMarkt(html);
+describe('parseMediaMarktCanarias', () => {
+  it('extrae título, precio, imagen y enlace de la búsqueda de Shopify', () => {
+    const products = parseMediaMarktCanarias(data);
 
-    expect(products).toHaveLength(1);
+    expect(products).toHaveLength(2);
     expect(products[0]).toEqual({
-      title: 'Teclado Logitech K120',
-      price: 12.99,
+      title: 'Teclado - Logitech K120, USB, Ultrafino, Patas ajustables',
+      price: 13.5,
       currency: 'EUR',
-      imageUrl: 'https://www.mediamarkt.es/media/teclado.jpg',
+      imageUrl:
+        'https://cdn.shopify.com/s/files/1/0285/3702/8668/products/k120.jpg',
       productUrl:
-        'https://www.mediamarkt.es/es/product/_teclado-logitech-k120.html'
+        'https://canarias.mediamarkt.es/products/teclado-logitech-k120-usb-ultrafino'
     });
   });
 
-  it('tolera páginas sin JSON-LD de productos', () => {
-    expect(parseMediaMarkt('<html><body>Sin resultados</body></html>')).toEqual(
-      []
+  it('acepta la imagen como cadena y descarta productos agotados', () => {
+    const products = parseMediaMarktCanarias(data);
+    const pack = products.find((item) => item.title.includes('MK250'));
+
+    expect(pack?.imageUrl).toBe(
+      'https://cdn.shopify.com/s/files/1/0285/3702/8668/products/mk250.jpg'
     );
+    expect(
+      products.some((item) => item.title.includes('K70 CORE'))
+    ).toBe(false);
+  });
+
+  it('tolera respuestas sin resultados', () => {
+    expect(parseMediaMarktCanarias({ resources: { results: {} } })).toEqual([]);
+    expect(parseMediaMarktCanarias(null)).toEqual([]);
   });
 });

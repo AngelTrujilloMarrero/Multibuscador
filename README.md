@@ -1,29 +1,30 @@
 # Multibuscador
 
-Comparador de precios que busca un producto en seis tiendas a la vez y muestra
+Comparador de precios que busca un producto en siete tiendas a la vez y muestra
 una tarjeta por tienda con foto, título, precio y enlace.
 
 Tiendas incluidas:
 
 - Alcampo
-- MediaMarkt
+- MediaMarkt Canarias
 - Nalber
 - El Faro Electrónica (La Laguna)
 - Lalo Electrónica
 - App Informática
+- Leroy Merlin (con stock de la tienda de La Laguna)
 
 > Proyecto local. No hay base de datos, cuentas de usuario ni claves de API.
 
 ## Cómo funciona
 
 El frontend envía la búsqueda a `GET /api/search?q=...`. El servidor lanza los
-seis adaptadores en paralelo con un timeout de 8 segundos. Cada adaptador obtiene
+siete adaptadores en paralelo con un timeout de 8 segundos. Cada adaptador obtiene
 el catálogo público de su tienda, extrae los productos y los normaliza. Después
 se puntúan por relevancia y se devuelven hasta cinco resultados por tienda.
 
-Si una tienda falla, la respuesta sigue siendo válida: esa tarjeta muestra el
-error y las demás conservan sus resultados. Las búsquedas se cachean en memoria
-durante 10 minutos y las peticiones simultáneas idénticas se comparten.
+Si una tienda falla, la respuesta sigue siendo válida: esa tarjeta explica qué
+ha pasado y las demás conservan sus resultados. Las búsquedas se cachean en
+memoria durante 10 minutos y las peticiones simultáneas idénticas se comparten.
 
 ## Requisitos
 
@@ -74,6 +75,39 @@ pnpm build         # Typecheck + build de producción
 pnpm verify        # Todo lo anterior en orden
 ```
 
+## Fuentes de datos por tienda
+
+| Tienda | Fuente | Formato | Protecciones |
+| --- | --- | --- | --- |
+| Alcampo | `compraonline.alcampo.es/search?q=` | JSON `productEntities` embebido | AWS WAF |
+| MediaMarkt Canarias | `canarias.mediamarkt.es/search/suggest.json?q=` | JSON Shopify | ninguna |
+| Nalber | `nalber.com/module/iqitsearch/searchiqit?s=` | HTML PrestaShop | ninguna |
+| El Faro | `electronicaelfaro.com/index.php?route=product/search&search=` | HTML OpenCart | ninguna |
+| Lalo | `laloelectronica.com/busqueda?s=` | HTML PrestaShop | ninguna |
+| App Informática | API VTEX `catalog_system/pub/products/search?ft=` | JSON VTEX | ninguna |
+| Leroy Merlin | `leroymerlin.es/sitemap-searchdex*.xml` + ficha de producto | XML + HTML | DataDome |
+
+Leroy Merlin no expone un buscador abierto, así que el adaptador localiza la
+familia de productos que coincide con la búsqueda en los sitemaps públicos y luego
+lee la ficha de cada producto para obtener el precio y la disponibilidad en la
+tienda de **La Laguna**. Esa disponibilidad aparece en la tarjeta con la etiqueta
+"En stock en La Laguna" o "Sin stock en La Laguna".
+
+## Protecciones anti-bot
+
+Alcampo (AWS WAF) y Leroy Merlin (DataDome) bloquean el acceso automatizado desde
+muchas IP. No se intenta saltarse esa protección: cuando ocurre, la tarjeta
+indica qué ha pasado y el resto de tiendas sigue funcionando.
+
+- **Alcampo**: pide una verificación humana interactiva. La app lo detecta,
+  espera 2 minutos antes de volver a intentarlo y avisa de que la tienda pide
+  verificación.
+- **Leroy Merlin**: responde con un bloqueo (403). La tarjeta avisa de que el
+  acceso automático está bloqueado y conviene reintentar más tarde.
+
+Si una tienda está protegida, conviene abrir su web en el navegador con
+normalidad y volver a probar la búsqueda.
+
 ## API
 
 ### `GET /api/health`
@@ -90,26 +124,31 @@ pnpm verify        # Todo lo anterior en orden
   "cached": false,
   "tookMs": 2450,
   "bestPrice": {
-    "store": "app-informatica",
-    "storeName": "App Informática",
-    "price": 9.99
+    "store": "nalber",
+    "storeName": "Nalber",
+    "price": 9.63
   },
   "results": [
     {
-      "store": "alcampo",
-      "name": "Alcampo",
-      "shortName": "A",
-      "color": "#e30613",
+      "store": "leroy-merlin",
+      "name": "Leroy Merlin",
+      "shortName": "LM",
+      "color": "#78be20",
       "status": "ok",
       "fetchedAt": "2026-10-20T10:00:00.000Z",
       "tookMs": 1200,
       "products": [
         {
           "title": "Teclado Logitech K120",
-          "price": 12.9,
+          "price": 13.5,
           "currency": "EUR",
           "imageUrl": "https://...",
-          "productUrl": "https://..."
+          "productUrl": "https://...",
+          "availability": {
+            "store": "La Laguna",
+            "inStock": true,
+            "text": "A partir de 2 días La Laguna GRATIS"
+          }
         }
       ]
     }
@@ -118,7 +157,7 @@ pnpm verify        # Todo lo anterior en orden
 ```
 
 `status` puede ser `ok`, `empty` o `error`. En `error` se incluye un mensaje
-apto para mostrar al usuario. La respuesta siempre contiene las seis tiendas.
+apto para mostrar al usuario. La respuesta siempre contiene las siete tiendas.
 
 Límites: 40 peticiones por minuto y por IP, consulta de 2 a 80 caracteres.
 
@@ -132,10 +171,10 @@ src/
   styles/           CSS dividido en base, layout, componentes, estados y resultados
 server/
   adapters/         Un archivo por tienda y parser PrestaShop común
-  lib/              HTTP, caché, matching, rate limit, texto y JSON
+  lib/              HTTP, caché, matching, rate limit, sitemaps, texto y JSON
   routes/           Endpoint de búsqueda
   services/         Búsqueda paralela, timeout, caché y mejor precio
-  __fixtures__/     HTML/JSON para tests
+  __fixtures__/     HTML/JSON/XML para tests
 shared/
   types.ts          Tipos compartidos
 scripts/
@@ -161,8 +200,9 @@ pnpm test:watch
 ```
 
 Los tests no hacen peticiones de red. Usan fixtures de `server/__fixtures__/`
-para comprobar los parsers de Alcampo, MediaMarkt, Nalber, Lalo, El Faro y App
-Informática, además del matching, los precios y la extracción de JSON.
+para comprobar los parsers de Alcampo, MediaMarkt Canarias, Nalber, Lalo, El Faro,
+App Informática y Leroy Merlin, además del matching, los precios, la extracción de
+JSON y la detección de bloqueos anti-bot.
 
 ## CI y Dependabot
 
@@ -189,7 +229,3 @@ Quedan excluidos `pnpm-lock.yaml`, `dist/`, `dist-server/`, `node_modules/` y
 Los precios son orientativos, pueden cambiar y no incluyen gastos de envío.
 Multibuscador no está afiliado a las tiendas. Los datos proceden de sus catálogos
 online públicos; revisa siempre el precio final antes de comprar.
-
-Alcampo usa una protección anti-bot (AWS WAF). Si la activa, su tarjeta mostrará
-que pide verificación humana y el resto de tiendas seguirá funcionando con
-normalidad.

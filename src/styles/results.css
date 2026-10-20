@@ -98,6 +98,29 @@
   letter-spacing: -0.03em;
 }
 
+.product__stock {
+  align-self: flex-start;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.product__stock--in {
+  background: #e2f3ea;
+  color: #1c6b46;
+}
+
+.product__stock--out {
+  background: #fdecec;
+  color: #a12a20;
+}
+
+.product__stock--unknown {
+  background: #f1efe9;
+  color: var(--muted);
+}
+
 .store-card__link {
   display: inline-flex;
   align-items: center;

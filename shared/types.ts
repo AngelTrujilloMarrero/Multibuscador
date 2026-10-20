@@ -4,7 +4,14 @@ export type StoreId =
   | 'nalber'
   | 'el-faro'
   | 'lalo'
-  | 'app-informatica';
+  | 'app-informatica'
+  | 'leroy-merlin';
+
+export interface ProductAvailability {
+  store: string;
+  inStock: boolean | null;
+  text?: string;
+}
 
 export interface Product {
   title: string;
@@ -13,6 +20,7 @@ export interface Product {
   imageUrl: string | null;
   productUrl: string;
   category?: string | null;
+  availability?: ProductAvailability | null;
 }
 
 export type StoreStatus = 'ok' | 'empty' | 'error';

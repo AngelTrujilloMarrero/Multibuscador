@@ -8,11 +8,12 @@ Aplicación web que recibe el nombre de un producto y muestra, en paralelo, una
 foto, un título, un precio y un enlace de cada una de estas tiendas:
 
 - Alcampo
-- MediaMarkt
+- MediaMarkt Canarias
 - Nalber
 - El Faro Electrónica (La Laguna)
 - Lalo Electrónica
 - App Informática
+- Leroy Merlin (con el stock de la tienda de La Laguna)
 
 El proyecto funciona en local. No hay base de datos ni claves de API.
 
@@ -119,11 +120,12 @@ Reglas:
 | Tienda | Fuente | Formato |
 | --- | --- | --- |
 | Alcampo | `compraonline.alcampo.es/search?q=` | JSON `productEntities` embebido |
-| MediaMarkt | `mediamarkt.es/es/search.html?query=` | JSON-LD `ItemList` |
+| MediaMarkt Canarias | `canarias.mediamarkt.es/search/suggest.json?q=` | JSON Shopify |
 | Nalber | `nalber.com/module/iqitsearch/searchiqit?s=` | HTML PrestaShop |
 | El Faro | `electronicaelfaro.com/index.php?route=product/search&search=` | HTML OpenCart |
 | Lalo | `laloelectronica.com/busqueda?s=` | HTML PrestaShop |
 | App Informática | API VTEX `catalog_system/pub/products/search?ft=` | JSON VTEX |
+| Leroy Merlin | `leroymerlin.es/sitemap-searchdex*.xml` + ficha de producto | XML + HTML |
 
 Los scrapers dependen del HTML de terceros. Si una tienda cambia su marcado,
 actualiza su parser, añade o ajusta el fixture y ejecuta `pnpm test`.
@@ -132,9 +134,24 @@ actualiza su parser, añade o ajusta el fixture y ejecuta `pnpm test`.
 
 Alcampo está detrás de AWS WAF y, si detecta demasiado tráfico, responde con una
 página de verificación humana (`202` o el texto `challenge-container`). El
-adaptador detecta esa situación, la cachea durante 5 minutos y devuelve un error
+adaptador detecta esa situación, la cachea durante 2 minutos y devuelve un error
 claro en lugar de fingir que no hay productos. No intentes saltarte el reto: la
 tarjeta debe explicar qué ocurre y las demás tiendas deben seguir respondiendo.
+
+### Leroy Merlin y el stock en La Laguna
+
+Leroy Merlin no ofrece un buscador abierto y usa DataDome. El adaptador solo
+consume recursos publicados para buscadores: los sitemaps públicos
+(`sitemap-searchdex1/2.xml`) para localizar la familia de productos que coincide
+con la búsqueda y la ficha de producto (`/productos/...html`) para leer el precio
+y la disponibilidad.
+
+La disponibilidad se expone en `Product.availability` (`store`, `inStock`,
+`text`). La tarjeta muestra "En stock en La Laguna", "Sin stock en La Laguna" o
+"Stock en La Laguna no disponible" cuando la página no confirma el estado.
+
+Si DataDome responde con 403, la app lo comunica como bloqueo de acceso
+automático. No intentes evadirlo.
 
 ## Matching
 

@@ -1,0 +1,36 @@
+{
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "title": "Teclado - Logitech K120, USB, Ultrafino, Patas ajustables",
+          "handle": "teclado-logitech-k120-usb-ultrafino-patas-ajustables",
+          "url": "/products/teclado-logitech-k120-usb-ultrafino?_pos=1&_psq=teclado&_psid=a9d72af59",
+          "price": "13.50",
+          "price_min": 13.5,
+          "price_max": 13.5,
+          "available": true,
+          "featured_image": {
+            "url": "https://cdn.shopify.com/s/files/1/0285/3702/8668/products/k120.jpg"
+          }
+        },
+        {
+          "title": "Pack Teclado + Ratón - Logitech MK250, Inalámbrico",
+          "handle": "pack-teclado-raton-logitech-mk250",
+          "url": "/products/pack-teclado-raton-logitech-mk250?_pos=2&_psq=teclado",
+          "price": "26.28",
+          "available": true,
+          "featured_image": "https://cdn.shopify.com/s/files/1/0285/3702/8668/products/mk250.jpg"
+        },
+        {
+          "title": "Teclado gaming - Corsair K70 CORE, Retroiluminación RGB",
+          "handle": "teclado-gaming-corsair-k70-core",
+          "url": "/products/teclado-gaming-corsair-k70-core",
+          "price": "99.99",
+          "available": false,
+          "featured_image": "https://cdn.shopify.com/s/files/1/0285/3702/8668/products/k70.jpg"
+        }
+      ]
+    }
+  }
+}

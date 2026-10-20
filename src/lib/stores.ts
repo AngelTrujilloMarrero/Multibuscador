@@ -15,14 +15,15 @@ export const STORE_ORDER: StoreId[] = [
   'nalber',
   'el-faro',
   'lalo',
-  'app-informatica'
+  'app-informatica',
+  'leroy-merlin'
 ];
 
 export const STORE_META: Record<StoreId, StoreMeta> = {
   alcampo: { id: 'alcampo', name: 'Alcampo', shortName: 'A', color: '#e30613' },
   mediamarkt: {
     id: 'mediamarkt',
-    name: 'MediaMarkt',
+    name: 'MediaMarkt Canarias',
     shortName: 'MM',
     color: '#c8102e'
   },
@@ -44,6 +45,12 @@ export const STORE_META: Record<StoreId, StoreMeta> = {
     name: 'App Informática',
     shortName: 'APP',
     color: '#007d82'
+  },
+  'leroy-merlin': {
+    id: 'leroy-merlin',
+    name: 'Leroy Merlin',
+    shortName: 'LM',
+    color: '#78be20'
   }
 };
 

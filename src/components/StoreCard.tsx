@@ -1,8 +1,32 @@
 import { useState } from 'react';
-import type { StoreResult } from '../../shared/types';
+import type { ProductAvailability, StoreResult } from '../../shared/types';
 import { formatPrice, formatTime, formatTook } from '../lib/format';
 import { ProductImage } from './ProductImage';
 import { StoreBadge } from './StoreBadge';
+
+function stockState(inStock: boolean | null): 'in' | 'out' | 'unknown' {
+  if (inStock === true) {
+    return 'in';
+  }
+
+  if (inStock === false) {
+    return 'out';
+  }
+
+  return 'unknown';
+}
+
+function stockLabel(availability: ProductAvailability): string {
+  if (availability.inStock === true) {
+    return `En stock en ${availability.store}`;
+  }
+
+  if (availability.inStock === false) {
+    return `Sin stock en ${availability.store}`;
+  }
+
+  return `Stock en ${availability.store} no disponible`;
+}
 
 interface StoreCardProps {
   result: StoreResult;
@@ -42,6 +66,13 @@ export function StoreCard({ result, best, onRetry }: StoreCardProps) {
             <div className="product__info">
               <h3 className="product__title">{main.title}</h3>
               <p className="product__price">{formatPrice(main.price)}</p>
+              {main.availability && (
+                <p
+                  className={`product__stock product__stock--${stockState(main.availability.inStock)}`}
+                >
+                  {stockLabel(main.availability)}
+                </p>
+              )}
             </div>
           </a>
 

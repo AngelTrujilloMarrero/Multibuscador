@@ -6,7 +6,7 @@ import type {
 import { ADAPTERS } from '../adapters/registry.js';
 import type { StoreAdapter } from '../adapters/types.js';
 import { TtlCache } from '../lib/cache.js';
-import { WafChallengeError } from '../lib/http.js';
+import { BotProtectionError, WafChallengeError } from '../lib/http.js';
 import { rankProducts } from '../lib/matching.js';
 import { normalizeText } from '../lib/text.js';
 
@@ -98,7 +98,11 @@ async function runAdapter(
 
 function buildErrorMessage(error: unknown, aborted: boolean): string {
   if (error instanceof WafChallengeError) {
-    return 'La tienda pide verificación humana. Inténtalo de nuevo en unos minutos.';
+    return 'La tienda pide verificación humana (protección anti-bot). Espera unos minutos y vuelve a intentarlo.';
+  }
+
+  if (error instanceof BotProtectionError) {
+    return 'La tienda bloquea el acceso automático (protección anti-bot). Prueba más tarde.';
   }
 
   if (aborted) {

@@ -1,3 +1,5 @@
+import { STORE_ORDER } from '../lib/stores';
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
@@ -49,7 +51,8 @@ export function SearchBar({
       </div>
 
       <p className="search__hint" id="search-hint">
-        Consultamos 6 tiendas a la vez y te mostramos el mejor precio.
+        Consultamos {STORE_ORDER.length} tiendas a la vez y te mostramos el precio
+        más bajo encontrado.
       </p>
     </form>
   );

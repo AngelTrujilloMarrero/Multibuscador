@@ -1,0 +1,290 @@
+import * as cheerio from 'cheerio';
+import type { Cheerio } from 'cheerio';
+import type { Product, ProductAvailability } from '../../shared/types.js';
+import { fetchText } from '../lib/http.js';
+import { tokenize } from '../lib/matching.js';
+import { loadSitemapUrls } from '../lib/sitemap.js';
+import {
+  absoluteUrl,
+  dedupeProducts,
+  normalizeText,
+  parsePrice
+} from '../lib/text.js';
+import type { StoreAdapter } from './types.js';
+
+const BASE_URL = 'https://www.leroymerlin.es';
+const SEARCHDEX_URLS = [
+  `${BASE_URL}/sitemap-searchdex1.xml`,
+  `${BASE_URL}/sitemap-searchdex2.xml`
+];
+const MAX_FAMILY_PAGES = 2;
+const MAX_PRODUCT_PAGES = 5;
+
+export const STORE_NAME = 'La Laguna';
+
+function slugOf(url: string): string {
+  const last = url.split('/').pop() ?? '';
+  return last.replace(/\.html$/, '').replace(/-p$/, '');
+}
+
+export function scoreSlug(slug: string, queryTokens: string[]): number {
+  const words = normalizeText(slug.replace(/-/g, ' ')).split(' ');
+  const hits = queryTokens.filter(
+    (token) => words.some((word) => word === token || word.startsWith(token))
+  ).length;
+
+  return queryTokens.length === 0 ? 0 : hits / queryTokens.length;
+}
+
+function rankFamilyUrls(
+  locations: string[],
+  queryTokens: string[],
+  limit: number
+): string[] {
+  const scored = locations
+    .map((url) => ({ url, score: scoreSlug(slugOf(url), queryTokens) }))
+    .filter((entry) => entry.score >= 0.75)
+    .sort((left, right) => right.score - left.score);
+
+  const unique: string[] = [];
+
+  for (const entry of scored) {
+    if (unique.length >= limit) {
+      break;
+    }
+
+    if (!unique.includes(entry.url)) {
+      unique.push(entry.url);
+    }
+  }
+
+  return unique;
+}
+
+export async function findFamilyUrls(
+  query: string,
+  fetcher: (url: string) => Promise<string>
+): Promise<string[]> {
+  const queryTokens = tokenize(query);
+
+  if (queryTokens.length === 0) {
+    return [];
+  }
+
+  for (const sitemapUrl of SEARCHDEX_URLS) {
+    const locations = await loadSitemapUrls(sitemapUrl, fetcher);
+    const matches = rankFamilyUrls(locations, queryTokens, MAX_FAMILY_PAGES);
+
+    if (matches.length > 0) {
+      return matches;
+    }
+  }
+
+  return [];
+}
+
+function readImage(container: Cheerio<any>): string | null {
+  const candidates = [
+    container.find('img').first().attr('data-src'),
+    container.find('img').first().attr('data-original'),
+    container.find('img').first().attr('src'),
+    container.find('source').first().attr('srcset'),
+    container.find('img').first().attr('srcset')
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || candidate.startsWith('data:')) {
+      continue;
+    }
+
+    const url = candidate.split(',')[0]?.split(' ')[0]?.trim();
+
+    if (url) {
+      return url;
+    }
+  }
+
+  return null;
+}
+
+export function parseAvailability(
+  scope: Cheerio<any>,
+  storeName: string
+): ProductAvailability | null {
+  if (!scope || scope.length === 0) {
+    return null;
+  }
+
+  const text = scope.text().replace(/\s+/g, ' ').trim();
+  const lower = text.toLowerCase();
+  const badgeClass = scope.find('.stock-status_badge').first().attr('class') ?? '';
+
+  let inStock: boolean | null = null;
+
+  if (/sin stock|agotado|no disponible|sin disponibilidad/.test(lower)) {
+    inStock = false;
+  } else if (badgeClass.includes('--green')) {
+    inStock = true;
+  } else if (badgeClass.includes('--red') || badgeClass.includes('--orange')) {
+    inStock = false;
+  }
+
+  const mentionsStore = lower.includes(storeName.toLowerCase());
+
+  return {
+    store: storeName,
+    inStock: mentionsStore ? inStock : null,
+    text: mentionsStore ? text.slice(0, 160) : undefined
+  };
+}
+
+const AVAILABILITY_SELECTOR =
+  '.o-availabilities, [data-cerberus="ELEM_stocks"], .stock-status_text';
+
+function readProductTitle($: cheerio.CheerioAPI): string {
+  const heading = $('h1[data-cerberus="ELEM_h1"]').first().text().trim();
+
+  if (heading) {
+    return heading;
+  }
+
+  const ogTitle = $('meta[property="og:title"]').attr('content') ?? '';
+  return ogTitle.replace(/\s*\|\s*Leroy Merlin\s*$/i, '').trim();
+}
+
+function readProductPrice($: cheerio.CheerioAPI): number | null {
+  const prices = $('p.m-price.-main').toArray();
+  const main = prices.find((element) => {
+    const classes = $(element).attr('class') ?? '';
+    return !classes.includes('-light');
+  });
+
+  if (main) {
+    const price = parsePrice($(main).find('.m-price__line').first().text());
+    if (price !== null) {
+      return price;
+    }
+  }
+
+  return parsePrice($('[data-cerberus="ELEM_PRIX"]').first().text());
+}
+
+export function parseLeroyMerlinProduct(
+  html: string,
+  productUrl: string
+): Product | null {
+  const $ = cheerio.load(html);
+  const title = readProductTitle($);
+  const price = readProductPrice($);
+  const image = $('meta[property="og:image"]').attr('content') ?? null;
+
+  if (!title || price === null) {
+    return null;
+  }
+
+  return {
+    title,
+    price,
+    currency: 'EUR',
+    imageUrl: image ? absoluteUrl(image, BASE_URL) : null,
+    productUrl: absoluteUrl(productUrl, BASE_URL),
+    availability: parseAvailability(
+      $(AVAILABILITY_SELECTOR).first(),
+      STORE_NAME
+    )
+  };
+}
+
+export function parseLeroyMerlinListings(html: string): Product[] {
+  const $ = cheerio.load(html);
+  const products: Product[] = [];
+
+  $('[data-cerberus="ELEM_PRIX"]').each((_index, element) => {
+    const priceElement = $(element);
+    const price = parsePrice(priceElement.text());
+
+    if (price === null) {
+      return;
+    }
+
+    const container = priceElement.closest(
+      'article, li, .o-tile, .m-tile, [class*="tile"], [class*="product"]'
+    );
+
+    const link = container.find('a[href*="/productos/"]').first();
+    const href = link.attr('href');
+
+    if (!href) {
+      return;
+    }
+
+    const title =
+      link.find('h2, h3, h4, [class*="title"]').first().text().trim() ||
+      link.attr('title')?.trim() ||
+      link.text().trim();
+
+    if (!title) {
+      return;
+    }
+
+    const image = readImage(container);
+
+    products.push({
+      title: title.replace(/\s+/g, ' ').trim(),
+      price,
+      currency: 'EUR',
+      imageUrl: image ? absoluteUrl(image, BASE_URL) : null,
+      productUrl: absoluteUrl(href, BASE_URL),
+      availability: parseAvailability(
+        container.find(AVAILABILITY_SELECTOR).first().length > 0
+          ? container.find(AVAILABILITY_SELECTOR).first()
+          : container,
+        STORE_NAME
+      )
+    });
+  });
+
+  return dedupeProducts(products).slice(0, 30);
+}
+
+async function enrichWithProductPage(
+  product: Product,
+  signal: AbortSignal
+): Promise<Product> {
+  try {
+    const html = await fetchText(product.productUrl, signal);
+    const detailed = parseLeroyMerlinProduct(html, product.productUrl);
+    return detailed ?? product;
+  } catch {
+    return product;
+  }
+}
+
+export const leroyMerlinAdapter: StoreAdapter = {
+  id: 'leroy-merlin',
+  name: 'Leroy Merlin',
+  shortName: 'LM',
+  color: '#78be20',
+  async search(query, signal) {
+    const familyUrls = await findFamilyUrls(query, (url) =>
+      fetchText(url, signal)
+    );
+
+    if (familyUrls.length === 0) {
+      return [];
+    }
+
+    const pages = await Promise.all(
+      familyUrls.map(async (url) => {
+        const html = await fetchText(url, signal);
+        return parseLeroyMerlinListings(html);
+      })
+    );
+
+    const listings = dedupeProducts(pages.flat()).slice(0, MAX_PRODUCT_PAGES);
+
+    return Promise.all(
+      listings.map((product) => enrichWithProductPage(product, signal))
+    );
+  }
+};

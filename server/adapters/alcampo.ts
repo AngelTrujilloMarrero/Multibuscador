@@ -5,7 +5,7 @@ import { absoluteUrl, dedupeProducts, parsePrice } from '../lib/text.js';
 import type { StoreAdapter } from './types.js';
 
 const BASE_URL = 'https://www.compraonline.alcampo.es';
-const CHALLENGE_COOLDOWN_MS = 5 * 60 * 1000;
+const CHALLENGE_COOLDOWN_MS = 2 * 60 * 1000;
 const CHALLENGE_MARKERS = [
   'awsWafCookieDomainList',
   'Human Verification',

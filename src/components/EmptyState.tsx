@@ -9,7 +9,9 @@ export function EmptyState({ onExample }: EmptyStateProps) {
   return (
     <section className="empty">
       <div className="empty__intro">
-        <h1>Un producto. Seis tiendas. Un solo vistazo.</h1>
+        <h1>
+          Un producto. {STORE_ORDER.length} tiendas. Un solo vistazo.
+        </h1>
         <p>
           Busca el nombre del producto y compara al instante la foto y el precio
           que ofrece cada establecimiento.

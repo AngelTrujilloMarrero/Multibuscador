@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Comparador de precios multi-tienda para Canarias y España",
+  "description": "Comparador de precios en siete tiendas: Alcampo, MediaMarkt Canarias, Nalber, El Faro, Lalo, App Informática y Leroy Merlin (stock en La Laguna)",
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=20.19"

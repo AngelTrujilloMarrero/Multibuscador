@@ -27,6 +27,16 @@ export class WafChallengeError extends Error {
   }
 }
 
+export class BotProtectionError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly url: string
+  ) {
+    super(`Bloqueo anti-bot (${status}) en ${url}`);
+    this.name = 'BotProtectionError';
+  }
+}
+
 function isChallenge(response: Response): boolean {
   return (
     response.status === 202 ||
@@ -71,6 +81,10 @@ export async function fetchText(
       }
 
       if (!response.ok) {
+        if (response.status === 403 || response.status === 429) {
+          throw new BotProtectionError(response.status, url);
+        }
+
         throw new HttpError(response.status, url);
       }
 

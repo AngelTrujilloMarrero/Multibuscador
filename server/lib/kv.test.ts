@@ -27,6 +27,18 @@ describe('readKvConfig', () => {
   it('devuelve null si no hay caché configurada', () => {
     expect(readKvConfig({})).toBeNull();
   });
+
+  it('deduce la URL y el token de REDIS_URL', () => {
+    expect(
+      readKvConfig({ REDIS_URL: 'redis://default:secreto@x.upstash.io:6379' })
+    ).toEqual({ url: 'https://x.upstash.io', token: 'secreto' });
+  });
+
+  it('acepta los nombres REDIS_REST_URL y REDIS_REST_TOKEN', () => {
+    expect(
+      readKvConfig({ REDIS_REST_URL: 'https://x.io', REDIS_REST_TOKEN: 't' })
+    ).toEqual({ url: 'https://x.io', token: 't' });
+  });
 });
 
 describe('readCacheTtl', () => {

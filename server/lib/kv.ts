@@ -11,19 +11,40 @@ export function readKvConfig(
   const url = (
     env.KV_REST_API_URL ??
     env.UPSTASH_REDIS_REST_URL ??
+    env.REDIS_REST_URL ??
     ''
   ).trim();
   const token = (
     env.KV_REST_API_TOKEN ??
     env.UPSTASH_REDIS_REST_TOKEN ??
+    env.REDIS_REST_TOKEN ??
     ''
   ).trim();
 
-  if (!url || !token) {
-    return null;
+  if (url && token) {
+    return { url: url.replace(/\/$/, ''), token };
   }
 
-  return { url: url.replace(/\/$/, ''), token };
+  // Algunas integraciones solo inyectan REDIS_URL (redis://usuario:clave@host).
+  const redisUrl = env.REDIS_URL?.trim();
+
+  if (redisUrl) {
+    try {
+      const parsed = new URL(redisUrl);
+      const password = parsed.password ? decodeURIComponent(parsed.password) : '';
+
+      if (parsed.hostname && password) {
+        return {
+          url: `https://${parsed.hostname}`,
+          token: password
+        };
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export function readCacheTtl(

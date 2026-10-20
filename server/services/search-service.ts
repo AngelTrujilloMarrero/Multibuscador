@@ -6,7 +6,7 @@ import type {
 import { ADAPTERS } from '../adapters/registry.js';
 import type { StoreAdapter } from '../adapters/types.js';
 import { TtlCache } from '../lib/cache.js';
-import { BotProtectionError, WafChallengeError } from '../lib/http.js';
+import { BotProtectionError, HttpError, WafChallengeError } from '../lib/http.js';
 import { getCachedValue, readCacheTtl, readKvConfig, setCachedValue } from '../lib/kv.js';
 import { rankProducts } from '../lib/matching.js';
 import { normalizeText } from '../lib/text.js';
@@ -173,7 +173,11 @@ function buildErrorMessage(error: unknown, aborted: boolean): string {
     return 'La tienda tardó demasiado en responder.';
   }
 
-  return 'No se pudo consultar la tienda en este momento.';
+  if (error instanceof HttpError && error.status >= 500) {
+    return 'La tienda está teniendo problemas ahora mismo. Inténtalo en unos minutos.';
+  }
+
+  return 'No se pudo conectar con la tienda en este momento.';
 }
 
 function findBestPrice(results: StoreResult[]): BestPrice | null {

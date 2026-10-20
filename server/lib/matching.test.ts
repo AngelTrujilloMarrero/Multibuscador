@@ -83,6 +83,27 @@ describe('rankProducts', () => {
     expect(ranked[0]?.title).toBe('Monitor 24 pulgadas Full HD');
   });
 
+  it('penaliza el accesorio cuando precede al término buscado', () => {
+    const ranked = rankProducts('monitor', [
+      product('TOOQ soporte para monitor modelo QMR086', 15),
+      product('Bafle para sonorización MONITOR 3T', 40),
+      product('Monitor 24 pulgadas IPS Full HD', 120)
+    ]);
+
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]?.title).toBe('Monitor 24 pulgadas IPS Full HD');
+  });
+
+  it('descarta vigilabebés cuando no se piden', () => {
+    const ranked = rankProducts('monitor', [
+      product('Monitor de audio vigilabebés PIP150 MOTOROLA', 60),
+      product('Monitor 24 pulgadas IPS', 120)
+    ]);
+
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]?.title).toBe('Monitor 24 pulgadas IPS');
+  });
+
   it('penaliza kits de limpieza y similares', () => {
     const ranked = rankProducts('auriculares', [
       product('Kit de limpieza auriculares 3 en 1 Nedis', 4),

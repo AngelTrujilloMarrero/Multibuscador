@@ -47,7 +47,9 @@ const ACCESSORY_WORDS = new Set([
   'numerico',
   'numpad',
   'keypad',
-  'botonera'
+  'botonera',
+  'bafle',
+  'altavoz'
 ]);
 
 const ACCESSORY_CONTEXT_WORDS = [
@@ -61,7 +63,9 @@ const ACCESSORY_CONTEXT_WORDS = [
   'limpiador',
   'limpiar',
   'recambio',
-  'repuestos'
+  'repuestos',
+  'vigilabebes',
+  'parabebe'
 ];
 
 const CATEGORY_ACCESSORY_WORDS = new Set([
@@ -99,8 +103,18 @@ function scoreTitle(
   const categoryNorm = normalizeText(product.category ?? '');
 
   let hits = 0;
+  let firstMatchIndex = -1;
+
   for (const token of queryTokens) {
-    if (titleTokens.has(token) || (token.length >= 4 && titleNorm.includes(token))) {
+    const index = titleTokenList.indexOf(token);
+
+    if (index !== -1) {
+      hits += 1;
+
+      if (firstMatchIndex === -1 || index < firstMatchIndex) {
+        firstMatchIndex = index;
+      }
+    } else if (token.length >= 4 && titleNorm.includes(token)) {
       hits += 1;
     }
   }
@@ -119,16 +133,23 @@ function scoreTitle(
     score += 0.05;
   }
 
+  // Un accesorio es el sustantivo principal si aparece antes del primer
+  // término de la búsqueda: "soporte para monitor" es un soporte, no un monitor.
+  const headIndex = firstMatchIndex === -1 ? 0 : firstMatchIndex;
+  const hasHeadAccessory = titleTokenList.some(
+    (word, index) => index < headIndex && ACCESSORY_WORDS.has(word)
+  );
   const titleHasAccessory =
     COMPONENT_PATTERN.test(titleNorm) ||
-    (titleTokenList.length > 0 && ACCESSORY_WORDS.has(titleTokenList[0])) ||
+    hasHeadAccessory ||
     ACCESSORY_CONTEXT_WORDS.some((word) => titleTokens.has(word));
   const categoryHasAccessory = [...CATEGORY_ACCESSORY_WORDS].some((word) =>
     categoryNorm.includes(word)
   );
   const queryHasAccessory =
     [...ACCESSORY_WORDS].some((word) => queryTokens.includes(word)) ||
-    [...CATEGORY_ACCESSORY_WORDS].some((word) => queryTokens.includes(word));
+    [...CATEGORY_ACCESSORY_WORDS].some((word) => queryTokens.includes(word)) ||
+    ACCESSORY_CONTEXT_WORDS.some((word) => queryTokens.includes(word));
 
   if ((titleHasAccessory || categoryHasAccessory) && !queryHasAccessory) {
     score -= 0.5;

@@ -12,9 +12,15 @@ import { rankProducts } from '../lib/matching.js';
 import { normalizeText } from '../lib/text.js';
 
 const REQUEST_TIMEOUT_MS = 8_000;
+const STALE_FACTOR = 4;
 
 const memoryCache = new TtlCache<string, SearchResponse>(600_000, 100);
 const inFlight = new Map<string, Promise<SearchResponse>>();
+
+interface SharedEntry {
+  at: number;
+  data: SearchResponse;
+}
 
 /**
  * Busca en la caché compartida (Vercel KV / Upstash) y, si no hay, en la
@@ -37,16 +43,24 @@ export async function searchAll(query: string): Promise<SearchResponse> {
 
   if (shared) {
     try {
-      const parsed = JSON.parse(shared) as SearchResponse;
-      memoryCache.set(key, parsed);
-      return { ...parsed, cached: true };
+      const entry = JSON.parse(shared) as SharedEntry;
+      const age = Date.now() - entry.at;
+
+      if (age < ttl * 1000) {
+        memoryCache.set(key, entry.data);
+        return { ...entry.data, cached: true };
+      }
+
+      // Datos antiguos: se sirven igual y se refrescan en segundo plano.
+      memoryCache.set(key, entry.data);
+      void refreshInBackground(query, key, kv, ttl);
+      return { ...entry.data, cached: true };
     } catch {
       // Entrada corrupta: se ignora y se vuelve a consultar.
     }
   }
 
   const pending = inFlight.get(key);
-
   if (pending) {
     return pending;
   }
@@ -59,12 +73,32 @@ export async function searchAll(query: string): Promise<SearchResponse> {
 
   await setCachedValue(
     `search:${key}`,
-    JSON.stringify(response),
-    ttl,
+    JSON.stringify({ at: Date.now(), data: response } satisfies SharedEntry),
+    ttl * STALE_FACTOR,
     kv
   );
 
   return response;
+}
+
+async function refreshInBackground(
+  query: string,
+  key: string,
+  kv: ReturnType<typeof readKvConfig>,
+  ttl: number
+): Promise<void> {
+  try {
+    const response = await runSearch(query);
+    memoryCache.set(key, response);
+    await setCachedValue(
+      `search:${key}`,
+      JSON.stringify({ at: Date.now(), data: response } satisfies SharedEntry),
+      ttl * STALE_FACTOR,
+      kv
+    );
+  } catch {
+    // Si falla el refresco se conserva el dato antiguo.
+  }
 }
 
 async function runSearch(query: string): Promise<SearchResponse> {

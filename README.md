@@ -150,6 +150,7 @@ app se encarga de armar la URL. La clave nunca llega al navegador.
 | `SCRAPER_API_KEY` | ScraperAPI | Añade `SCRAPER_RENDER_JS=true` para usar un navegador real (ayuda con WAF/captcha) |
 | `ZYTE_API_KEY` | Zyte | |
 | `SCRAPINGBEE_API_KEY` | ScrapingBee | |
+| `PROXY_STORES` | — | `alcampo,leroy-merlin`: solo esas dos tiendas van por el proxy, el resto en directo (ahorra créditos) |
 | `PROXY_URL_TEMPLATE` | Cualquiera o proxy propio | Plantilla con `{url}`, `{url_raw}` y `{api_key}`; tiene prioridad sobre las anteriores |
 | `PROXY_API_KEY` | Plantilla personalizada | |
 | `PROXY_HEADERS` | Todos | Cabeceras extra en JSON |

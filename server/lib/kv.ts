@@ -52,9 +52,13 @@ async function kvRequest(
     throw new Error(`KV ${response.status} en ${path}`);
   }
 
-  const payload = (await response.json()) as { result?: unknown };
+  const payload = (await response.json()) as { result?: unknown; value?: unknown };
 
-  return payload.result ?? null;
+  if (payload && typeof payload === 'object') {
+    return payload.result ?? payload.value ?? null;
+  }
+
+  return payload;
 }
 
 export async function getCachedValue(
@@ -84,10 +88,33 @@ export async function setCachedValue(
     return;
   }
 
+  const encodedKey = encodeURIComponent(key);
+
   try {
-    await kvRequest(config, `set/${encodeURIComponent(key)}`, {
+    const response = await fetch(`${config.url}/set/${encodedKey}`, {
       method: 'POST',
+      headers: {
+        authorization: `Bearer ${config.token}`,
+        'content-type': 'application/json'
+      },
       body: JSON.stringify([value, 'EX', String(ttlSeconds)])
+    });
+
+    if (response.ok) {
+      return;
+    }
+  } catch {
+    // Se intenta el formato alternativo.
+  }
+
+  try {
+    await fetch(`${config.url}/set/${encodedKey}`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${config.token}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ value, expiration: ttlSeconds })
     });
   } catch {
     // La caché es una optimización: si falla, la búsqueda sigue funcionando.

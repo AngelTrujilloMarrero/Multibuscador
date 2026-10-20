@@ -4,6 +4,7 @@ import {
   fetchText,
   HttpError,
   readProxyConfig,
+  shouldUseProxy,
   WafChallengeError
 } from './http';
 
@@ -134,5 +135,28 @@ describe('proxy de scraping', () => {
     });
 
     expect(config?.provider).toBe('personalizado');
+  });
+});
+
+describe('PROXY_STORES', () => {
+  it('usa el proxy en todas las tiendas si no se restringe', () => {
+    expect(shouldUseProxy('https://nalber.com/x', {})).toBe(true);
+  });
+
+  it('solo enruta las tiendas indicadas', () => {
+    const env = { PROXY_STORES: 'alcampo, leroy-merlin' };
+
+    expect(shouldUseProxy('https://www.compraonline.alcampo.es/search', env)).toBe(
+      true
+    );
+    expect(shouldUseProxy('https://www.leroymerlin.es/productos/x.html', env)).toBe(
+      true
+    );
+    expect(shouldUseProxy('https://nalber.com/module/iqitsearch', env)).toBe(
+      false
+    );
+    expect(shouldUseProxy('https://canarias.mediamarkt.es/search', env)).toBe(
+      false
+    );
   });
 });

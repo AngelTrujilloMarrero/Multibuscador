@@ -171,6 +171,56 @@ function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+const STORE_BY_HOST: Record<string, string> = {
+  'compraonline.alcampo.es': 'alcampo',
+  'www.compraonline.alcampo.es': 'alcampo',
+  'leroymerlin.es': 'leroy-merlin',
+  'www.leroymerlin.es': 'leroy-merlin'
+};
+
+export function readProxyStores(
+  env: Record<string, string | undefined> = process.env
+): string[] | null {
+  const raw = env.PROXY_STORES?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  return raw
+    .split(',')
+    .map((store) => store.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function storeOfUrl(url: string): string | null {
+  try {
+    return STORE_BY_HOST[new URL(url).hostname] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decide si una petición concreta debe ir por el proxy. Con `PROXY_STORES`
+ * solo se enrutan las tiendas indicadas (por ejemplo Alcampo y Leroy Merlin),
+ * así el proxy no se gasta en las tiendas que ya funcionan.
+ */
+export function shouldUseProxy(
+  url: string,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const stores = readProxyStores(env);
+
+  if (!stores) {
+    return true;
+  }
+
+  const store = storeOfUrl(url);
+
+  return store !== null && stores.includes(store);
+}
+
 export async function fetchText(
   url: string,
   signal: AbortSignal,
@@ -178,7 +228,7 @@ export async function fetchText(
   headers: Record<string, string> = DEFAULT_HEADERS
 ): Promise<string> {
   let lastError: unknown;
-  const proxy = readProxyConfig();
+  const proxy = shouldUseProxy(url) ? readProxyConfig() : null;
   const requestUrl = buildRequestUrl(url, proxy);
   const requestHeaders = buildHeaders(proxy, headers);
 

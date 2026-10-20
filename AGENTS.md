@@ -68,6 +68,7 @@ pnpm verify           # check:lines + typecheck + test + build
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 | `SCRAPER_API_KEY` | Proxy ScraperAPI (arma la URL solo) |
+| `PROXY_STORES` | Tiendas que van por el proxy (por ejemplo `alcampo,leroy-merlin`) |
 | `ZYTE_API_KEY` | Proxy Zyte |
 | `SCRAPINGBEE_API_KEY` | Proxy ScrapingBee |
 | `SCRAPER_RENDER_JS` | ScraperAPI con navegador real |

@@ -6,7 +6,7 @@ import type {
 import { ADAPTERS } from '../adapters/registry.js';
 import type { StoreAdapter } from '../adapters/types.js';
 import { TtlCache } from '../lib/cache.js';
-import { BotProtectionError, HttpError, WafChallengeError } from '../lib/http.js';
+import { BotProtectionError, HttpError } from '../lib/http.js';
 import { getCachedValue, readCacheTtl, readKvConfig, setCachedValue } from '../lib/kv.js';
 import { rankProducts } from '../lib/matching.js';
 import { normalizeText } from '../lib/text.js';
@@ -25,8 +25,7 @@ interface SharedEntry {
 /**
  * Busca en la caché compartida (Upstash/Redis) y, si no hay, en la
  * memoria de la instancia. Con KV, una sola petición a las tiendas sirve a
- * todos los usuarios: es lo que evita que el volumen dispare los bloqueos
- * anti-bot de Alcampo y Leroy Merlin.
+ * todos los usuarios y se reduce el tráfico hacia sus catálogos.
  */
 export async function searchAll(query: string): Promise<SearchResponse> {
   const key = normalizeText(query);
@@ -39,7 +38,7 @@ export async function searchAll(query: string): Promise<SearchResponse> {
     return { ...inMemory, cached: true };
   }
 
-  const shared = await getCachedValue(`search:${key}`, kv);
+  const shared = await getCachedValue(`search:v2:${key}`, kv);
 
   if (shared) {
     try {
@@ -72,7 +71,7 @@ export async function searchAll(query: string): Promise<SearchResponse> {
   memoryCache.set(key, response);
 
   await setCachedValue(
-    `search:${key}`,
+    `search:v2:${key}`,
     JSON.stringify({ at: Date.now(), data: response } satisfies SharedEntry),
     ttl * STALE_FACTOR,
     kv
@@ -91,7 +90,7 @@ async function refreshInBackground(
     const response = await runSearch(query);
     memoryCache.set(key, response);
     await setCachedValue(
-      `search:${key}`,
+      `search:v2:${key}`,
       JSON.stringify({ at: Date.now(), data: response } satisfies SharedEntry),
       ttl * STALE_FACTOR,
       kv
@@ -161,10 +160,6 @@ async function runAdapter(
 }
 
 function buildErrorMessage(error: unknown, aborted: boolean): string {
-  if (error instanceof WafChallengeError) {
-    return 'La tienda pide verificación humana. Inténtalo de nuevo en unos minutos.';
-  }
-
   if (error instanceof BotProtectionError) {
     return 'La tienda bloquea el acceso automático (protección anti-bot). Prueba más tarde.';
   }

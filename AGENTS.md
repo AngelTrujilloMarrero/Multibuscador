@@ -7,13 +7,11 @@ Guía para personas y agentes que trabajen en **Multibuscador**.
 Aplicación web que recibe el nombre de un producto y muestra, en paralelo, una
 foto, un título, un precio y un enlace de cada una de estas tiendas:
 
-- Alcampo
 - MediaMarkt Canarias
 - Nalber
 - El Faro Electrónica (La Laguna)
 - Lalo Electrónica
 - App Informática
-- Leroy Merlin (con el stock de la tienda de La Laguna)
 
 El proyecto funciona en local. No hay base de datos ni claves de API.
 
@@ -69,22 +67,16 @@ pnpm verify           # check:lines + typecheck + test + build
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Upstash/Redis) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
-| `ALCAMPO_PROXY` | Proxy solo para Alcampo (clave o URL de proxy) |
-| `LEROY_MERLIN_PROXY` | Proxy solo para Leroy Merlin (clave o URL de proxy) |
-
-Si se define `ALCAMPO_PROXY` o `LEROY_MERLIN_PROXY`, solo esas tiendas van por el
-proxy, lo que evita los bloqueos por IP de AWS WAF (Alcampo) y DataDome (Leroy
-Merlin). Las demás tiendas van siempre en directo. La clave nunca se expone al
-cliente.
 
 Si hay caché compartida (KV/Upstash), una sola petición a las tiendas sirve a
-todos los usuarios: es la forma más efectiva de no disparar los bloqueos. No
-añadas dependencias para la caché: `server/lib/kv.ts` habla con la API REST.
+todos los usuarios y se reduce el tráfico hacia sus catálogos. No añadas
+dependencias para la caché: `server/lib/kv.ts` habla con la API REST.
 
 ## Despliegue
 
 - **Local**: `pnpm dev` o `pnpm build && pnpm start`. Es la única opción
-  soportada: sale desde una IP residencial y evita buena parte de los bloqueos.
+  soportada: sale desde una IP residencial, que es lo que mejor funciona con los
+  catálogos de estas tiendas.
 
 ## Estructura
 
@@ -107,7 +99,7 @@ scripts/              Utilidades de desarrollo
 ## Flujo de una búsqueda
 
 1. `GET /api/search?q=...` valida la consulta.
-2. `search-service.ts` consulta los seis adaptadores en paralelo.
+2. `search-service.ts` consulta los cinco adaptadores en paralelo.
 3. Cada adaptador tiene un máximo de 8 segundos.
 4. Si una tienda falla, las demás siguen y se devuelve un resultado parcial.
 5. Los productos se normalizan, puntúan y ordenan con `lib/matching.ts`.
@@ -146,40 +138,22 @@ Reglas:
 
 | Tienda | Fuente | Formato |
 | --- | --- | --- |
-| Alcampo | `compraonline.alcampo.es/search?q=` | JSON `productEntities` embebido |
 | MediaMarkt Canarias | `canarias.mediamarkt.es/search/suggest.json?q=` | JSON Shopify |
 | Nalber | `nalber.com/module/iqitsearch/searchiqit?s=` | HTML PrestaShop |
 | El Faro | `electronicaelfaro.com/index.php?route=product/search&search=` | HTML OpenCart |
 | Lalo | `laloelectronica.com/busqueda?s=` | HTML PrestaShop |
 | App Informática | API VTEX `catalog_system/pub/products/search?ft=` | JSON VTEX |
-| Leroy Merlin | `leroymerlin.es/sitemap-searchdex*.xml` + ficha de producto | XML + HTML |
 
 Los scrapers dependen del HTML de terceros. Si una tienda cambia su marcado,
 actualiza su parser, añade o ajusta el fixture y ejecuta `pnpm test`.
 
-### Alcampo y la protección anti-bot
+### Tiendas descartadas
 
-Alcampo está detrás de AWS WAF y, si detecta demasiado tráfico, responde con una
-página de verificación humana (`202` o el texto `challenge-container`). El
-adaptador detecta esa situación, espera 5 minutos antes de volver a intentarlo y
-devuelve un error claro en lugar de fingir que no hay productos. No intentes
-saltarte el reto: la tarjeta debe explicar qué ocurre y las demás tiendas deben
-seguir respondiendo.
-
-### Leroy Merlin y el stock en La Laguna
-
-Leroy Merlin no ofrece un buscador abierto y usa DataDome. El adaptador solo
-consume recursos publicados para buscadores: los sitemaps públicos
-(`sitemap-searchdex1/2.xml`) para localizar la familia de productos que coincide
-con la búsqueda y la ficha de producto (`/productos/...html`) para leer el precio
-y la disponibilidad.
-
-La disponibilidad se expone en `Product.availability` (`store`, `inStock`,
-`text`). La tarjeta muestra "En stock en La Laguna", "Sin stock en La Laguna" o
-"Stock en La Laguna no disponible" cuando la página no confirma el estado.
-
-Si DataDome responde con 403, la app lo comunica como bloqueo de acceso
-automático. No intentes evadirlo.
+Alcampo y Leroy Merlin se eliminaron del proyecto tras comprobar que bloquean
+el acceso automatizado de forma sistemática (AWS WAF y DataDome). No merecen la
+pena aunque exista un proxy o un truco puntual: añaden latencia, fallan a menudo
+y rompen la promesa de comparar todas las tiendas. No las reintroduzcas sin una
+fuente estable, pública y sin captchas.
 
 ## Matching
 
@@ -194,6 +168,8 @@ describa el comportamiento esperado.
 ## Frontend
 
 - UI en español, responsive y sin framework CSS.
+- La portada explica el flujo en tres pasos y muestra las tiendas disponibles.
+- El resumen destaca el mejor precio y permite saltar a la tarjeta de cada tienda.
 - Cada tarjeta muestra la tienda, la foto, el título, el precio y el enlace.
 - Si hay más de un resultado, se pueden desplegar alternativas.
 - Las imágenes se enlazan directamente con `referrerPolicy="no-referrer"` y
@@ -243,5 +219,5 @@ pnpm dev:api
 curl 'http://localhost:8787/api/search?q=teclado'
 ```
 
-Comprueba que las seis tiendas responden o fallan de forma controlada, que los
+Comprueba que las cinco tiendas responden o fallan de forma controlada, que los
 precios son números positivos y que los enlaces abren el producto correcto.

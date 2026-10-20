@@ -36,7 +36,7 @@ export function ResultsView({
   }, [response.results, sort]);
 
   return (
-    <section className="results" aria-live="polite">
+    <section className="results" id="results" aria-live="polite">
       <SummaryBar response={response} sort={sort} onSort={onSort} />
 
       <div className="stores-grid">

@@ -10,17 +10,14 @@ export interface StoreMeta {
 }
 
 export const STORE_ORDER: StoreId[] = [
-  'alcampo',
   'mediamarkt',
   'nalber',
   'el-faro',
   'lalo',
-  'app-informatica',
-  'leroy-merlin'
+  'app-informatica'
 ];
 
 export const STORE_META: Record<StoreId, StoreMeta> = {
-  alcampo: { id: 'alcampo', name: 'Alcampo', shortName: 'A', color: '#e30613' },
   mediamarkt: {
     id: 'mediamarkt',
     name: 'MediaMarkt Canarias',
@@ -45,12 +42,6 @@ export const STORE_META: Record<StoreId, StoreMeta> = {
     name: 'App Informática',
     shortName: 'APP',
     color: '#007d82'
-  },
-  'leroy-merlin': {
-    id: 'leroy-merlin',
-    name: 'Leroy Merlin',
-    shortName: 'LM',
-    color: '#78be20'
   }
 };
 

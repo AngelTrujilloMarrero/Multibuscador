@@ -1,0 +1,46 @@
+.sort {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.sort__label {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sort button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.sort button:hover {
+  color: var(--text);
+}
+
+.sort button.is-active {
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (max-width: 760px) {
+  .sort {
+    align-self: flex-start;
+  }
+}

@@ -1,30 +1,34 @@
 # Multibuscador
 
-Comparador de precios que busca un producto en siete tiendas a la vez y muestra
+Comparador de precios que busca un producto en cinco tiendas a la vez y muestra
 una tarjeta por tienda con foto, título, precio y enlace.
 
 Tiendas incluidas:
 
-- Alcampo
 - MediaMarkt Canarias
 - Nalber
 - El Faro Electrónica (La Laguna)
 - Lalo Electrónica
 - App Informática
-- Leroy Merlin (con stock de la tienda de La Laguna)
 
 > Proyecto local. No hay base de datos, cuentas de usuario ni claves de API.
 
 ## Cómo funciona
 
 El frontend envía la búsqueda a `GET /api/search?q=...`. El servidor lanza los
-siete adaptadores en paralelo con un timeout de 8 segundos. Cada adaptador obtiene
-el catálogo público de su tienda, extrae los productos y los normaliza. Después
-se puntúan por relevancia y se devuelven hasta cinco resultados por tienda.
+cinco adaptadores en paralelo con un timeout de 8 segundos. Cada adaptador
+obtiene el catálogo público de su tienda, extrae los productos y los normaliza.
+Después se puntúan por relevancia y se devuelven hasta cinco resultados por
+tienda.
 
 Si una tienda falla, la respuesta sigue siendo válida: esa tarjeta explica qué
 ha pasado y las demás conservan sus resultados. Las búsquedas se cachean en
 memoria durante 10 minutos y las peticiones simultáneas idénticas se comparten.
+
+No se incluyen tiendas que bloquean el acceso automatizado. Alcampo (AWS WAF) y
+Leroy Merlin (DataDome) se retiraron tras comprobar que devolvían bloqueos o
+captchas de forma sistemática: hacían más lenta la búsqueda y nunca garantizaban
+un precio fiable.
 
 ## Requisitos
 
@@ -77,14 +81,6 @@ pnpm verify        # Todo lo anterior en orden
 
 ## Caché compartida: una petición, muchos usuarios
 
-> 📄 Plan 100 % gratuito (KV, Alcampo, Leroy Merlin y servicios externos con
-> plan gratis) en **[PLAN-GRATUITO.md](PLAN-GRATUITO.md)**.
-
-Lalesson más importante (la misma que aplicaste a AEMET en DeBelingo): **no
-puede ser cada usuario el que pide el dato a la tienda**. Si cada visita (y cada
-instancia serverless) consulta a Alcampo o Leroy Merlin, el volumen de peticiones
-dispara sus protecciones anti-bot.
-
 Con una caché compartida (Upstash/Redis) el flujo es:
 
 ```
@@ -102,64 +98,17 @@ Variables de entorno:
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 
 Sin caché compartida la app sigue funcionando con la caché en memoria del
-servidor. También se cachea el descubrimiento de productos de Leroy Merlin
-(24 h).
+servidor.
 
 ## Fuentes de datos por tienda
 
-| Tienda | Fuente | Formato | Protecciones |
-| --- | --- | --- | --- |
-| Alcampo | `compraonline.alcampo.es/search?q=` | JSON `productEntities` embebido | AWS WAF |
-| MediaMarkt Canarias | `canarias.mediamarkt.es/search/suggest.json?q=` | JSON Shopify | ninguna |
-| Nalber | `nalber.com/module/iqitsearch/searchiqit?s=` | HTML PrestaShop | ninguna |
-| El Faro | `electronicaelfaro.com/index.php?route=product/search&search=` | HTML OpenCart | ninguna |
-| Lalo | `laloelectronica.com/busqueda?s=` | HTML PrestaShop | ninguna |
-| App Informática | API VTEX `catalog_system/pub/products/search?ft=` | JSON VTEX | ninguna |
-| Leroy Merlin | `leroymerlin.es/sitemap-searchdex*.xml` + ficha de producto | XML + HTML | DataDome |
-
-Leroy Merlin no expone un buscador abierto, así que el adaptador localiza la
-familia de productos que coincide con la búsqueda en los sitemaps públicos y luego
-lee la ficha de cada producto para obtener el precio y la disponibilidad en la
-tienda de **La Laguna**. Esa disponibilidad aparece en la tarjeta con la etiqueta
-"En stock en La Laguna" o "Sin stock en La Laguna".
-
-## Protecciones anti-bot
-
-Alcampo (AWS WAF) y Leroy Merlin (DataDome) bloquean el acceso automatizado desde
-muchas IP. No se intenta saltarse esa protección: cuando ocurre, la tarjeta
-indica qué ha pasado y el resto de tiendas sigue funcionando.
-
-- **Alcampo**: pide una verificación humana interactiva. La app lo detecta,
-  espera 2 minutos antes de volver a intentarlo y avisa de que la tienda pide
-  verificación.
-- **Leroy Merlin**: responde con un bloqueo (403). La tarjeta avisa de que el
-  acceso automático está bloqueado y conviene reintentar más tarde.
-
-Si una tienda está protegida, conviene abrir su web en el navegador con
-normalidad y volver a probar la búsqueda.
-
-### Proxy de scraping (dos variables)
-
-Alcampo y Leroy Merlin son las únicas tiendas que necesitan proxy; las otras
-cinco van siempre en directo. Define **dos variables** en `.env` (o en el
-entorno del servidor):
-
-| Variable | Para qué sirve |
-| --- | --- |
-| `ALCAMPO_PROXY` | Proxy solo para Alcampo |
-| `LEROY_MERLIN_PROXY` | Proxy solo para Leroy Merlin |
-
-El valor puede ser:
-
-- la **clave** de un servicio de proxy (se asume ScraperAPI):
-  `ALCAMPO_PROXY=mi-clave-scraperapi`
-- o la **URL completa** de tu proxy (con `{url}` o sin ella):
-  `ALCAMPO_PROXY=https://api.scraperapi.com?api_key=mi-clave&url={url}`
-  `ALCAMPO_PROXY=https://mi-proxy.example/?token=secreto`
-
-Si no se definen, esas tiendas se consultan directamente y puede que muestren el
-aviso de bloqueo anti-bot. En el log de la función verás
-`[proxy] alcampo consulta vía proxy` cuando está activo.
+| Tienda | Fuente | Formato |
+| --- | --- | --- |
+| MediaMarkt Canarias | `canarias.mediamarkt.es/search/suggest.json?q=` | JSON Shopify |
+| Nalber | `nalber.com/module/iqitsearch/searchiqit?s=` | HTML PrestaShop |
+| El Faro | `electronicaelfaro.com/index.php?route=product/search&search=` | HTML OpenCart |
+| Lalo | `laloelectronica.com/busqueda?s=` | HTML PrestaShop |
+| App Informática | API VTEX `catalog_system/pub/products/search?ft=` | JSON VTEX |
 
 ## API
 
@@ -175,22 +124,21 @@ aviso de bloqueo anti-bot. En el log de la función verás
 {
   "query": "teclado",
   "cached": false,
-  "tookMs": 2450,
+  "tookMs": 1450,
   "bestPrice": { "store": "nalber", "storeName": "Nalber", "price": 9.63 },
   "results": [
     {
-      "store": "leroy-merlin",
-      "name": "Leroy Merlin",
+      "store": "mediamarkt",
+      "name": "MediaMarkt Canarias",
       "status": "ok",
-      "tookMs": 1200,
+      "tookMs": 820,
       "products": [
         {
-          "title": "Teclado Logitech K120",
-          "price": 13.5,
+          "title": "Teclado inalámbrico SilverHT",
+          "price": 19.99,
           "currency": "EUR",
           "imageUrl": "https://...",
-          "productUrl": "https://...",
-          "availability": { "store": "La Laguna", "inStock": true }
+          "productUrl": "https://..."
         }
       ]
     }
@@ -199,18 +147,26 @@ aviso de bloqueo anti-bot. En el log de la función verás
 ```
 
 `status` puede ser `ok`, `empty` o `error`. En `error` se incluye un mensaje
-apto para mostrar al usuario. La respuesta siempre contiene las siete tiendas.
+apto para mostrar al usuario. La respuesta siempre contiene las cinco tiendas.
 
 Límites: 40 peticiones por minuto y por IP, consulta de 2 a 80 caracteres.
 
 ## Estructura
 
 ```text
-src/            Frontend React (components, hooks, lib, styles)
-server/         Backend Express (adapters por tienda, lib, routes, services)
-server/__fixtures__/  HTML/JSON/XML de ejemplo para los tests
-shared/         Tipos compartidos
-scripts/        check-file-length y sincronización de Leroy Merlin
+src/                  Frontend React
+  components/         Componentes de la UI
+  hooks/              Estado de búsqueda
+  lib/                API, formato, historial y metadatos de tiendas
+  styles/             CSS dividido por responsabilidad
+server/
+  adapters/           Un adaptador por tienda + parser PrestaShop común
+  lib/                HTTP, caché, matching, validación, rate limit y texto
+  routes/             Rutas HTTP
+  services/           Orquestación de búsquedas
+  __fixtures__/       HTML/JSON de ejemplo para los tests
+shared/types.ts       Tipos compartidos por frontend y backend
+scripts/              check-file-length
 ```
 
 ## Añadir una tienda
@@ -224,6 +180,10 @@ scripts/        check-file-length y sincronización de Leroy Merlin
 6. Añade un fixture y un test del parser.
 7. Ejecuta `pnpm verify` y prueba la búsqueda real.
 
+La tienda debe responder sin captchas ni bloqueos desde una IP residencial. Si
+no lo hace, no merece la pena integrarla: rompe la promesa de resultados
+completos y ralentiza al resto.
+
 ## Tests
 
 ```bash
@@ -232,9 +192,9 @@ pnpm test:watch
 ```
 
 Los tests no hacen peticiones de red. Usan fixtures de `server/__fixtures__/`
-para comprobar los parsers de Alcampo, MediaMarkt Canarias, Nalber, Lalo, El Faro,
-App Informática y Leroy Merlin, además del matching, los precios, la extracción de
-JSON y la detección de bloqueos anti-bot.
+para comprobar los parsers de MediaMarkt Canarias, Nalber, Lalo, El Faro y App
+Informática, además del matching, los precios, la extracción de JSON y la
+detección de bloqueos.
 
 ## CI y Dependabot
 

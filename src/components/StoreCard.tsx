@@ -1,32 +1,9 @@
 import { useState } from 'react';
-import type { ProductAvailability, StoreResult } from '../../shared/types';
+import type { CSSProperties } from 'react';
+import type { StoreResult } from '../../shared/types';
 import { formatPrice, formatTime, formatTook } from '../lib/format';
 import { ProductImage } from './ProductImage';
 import { StoreBadge } from './StoreBadge';
-
-function stockState(inStock: boolean | null): 'in' | 'out' | 'unknown' {
-  if (inStock === true) {
-    return 'in';
-  }
-
-  if (inStock === false) {
-    return 'out';
-  }
-
-  return 'unknown';
-}
-
-function stockLabel(availability: ProductAvailability): string {
-  if (availability.inStock === true) {
-    return `En stock en ${availability.store}`;
-  }
-
-  if (availability.inStock === false) {
-    return `Sin stock en ${availability.store}`;
-  }
-
-  return `Stock en ${availability.store} no disponible`;
-}
 
 interface StoreCardProps {
   result: StoreResult;
@@ -34,20 +11,40 @@ interface StoreCardProps {
   onRetry: () => void;
 }
 
+function ExternalIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M7 4h9v9M16 4 4 16" />
+    </svg>
+  );
+}
+
 export function StoreCard({ result, best, onRetry }: StoreCardProps) {
   const [expanded, setExpanded] = useState(false);
   const main = result.products[0];
   const isBest = best && result.status === 'ok' && Boolean(main);
+  const style = { '--store-color': result.color } as CSSProperties;
+  const total = result.products.length;
 
   return (
-    <article className={`store-card${isBest ? ' store-card--best' : ''}`}>
+    <article
+      id={`store-${result.store}`}
+      className={`store-card${isBest ? ' store-card--best' : ''}`}
+      style={style}
+    >
       <header className="store-card__head">
         <StoreBadge
           name={result.name}
           shortName={result.shortName}
           color={result.color}
         />
-        {isBest && <span className="best-badge">Precio más bajo</span>}
+        {isBest ? (
+          <span className="best-badge">Mejor precio</span>
+        ) : total > 0 ? (
+          <span className="result-count">
+            {total} {total === 1 ? 'resultado' : 'resultados'}
+          </span>
+        ) : null}
       </header>
 
       {result.status === 'ok' && main ? (
@@ -65,27 +62,17 @@ export function StoreCard({ result, best, onRetry }: StoreCardProps) {
             />
             <div className="product__info">
               <h3 className="product__title">{main.title}</h3>
-              <p className="product__price">{formatPrice(main.price)}</p>
-              {main.availability && (
-                <p
-                  className={`product__stock product__stock--${stockState(main.availability.inStock)}`}
-                >
-                  {stockLabel(main.availability)}
-                </p>
-              )}
+              <div className="product__bottom">
+                <p className="product__price">{formatPrice(main.price)}</p>
+                <span className="product__cta">
+                  Ver oferta
+                  <ExternalIcon />
+                </span>
+              </div>
             </div>
           </a>
 
-          <a
-            className="store-card__link"
-            href={main.productUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Ver en {result.name} <span aria-hidden="true">→</span>
-          </a>
-
-          {result.products.length > 1 && (
+          {total > 1 && (
             <div className="alternatives">
               <button
                 type="button"
@@ -95,7 +82,13 @@ export function StoreCard({ result, best, onRetry }: StoreCardProps) {
               >
                 {expanded
                   ? 'Ocultar alternativas'
-                  : `+${result.products.length - 1} resultados más`}
+                  : `Ver ${total - 1} alternativa${total - 1 === 1 ? '' : 's'} más`}
+                <span
+                  className={`alternatives__chevron${expanded ? ' is-open' : ''}`}
+                  aria-hidden="true"
+                >
+                  ▾
+                </span>
               </button>
 
               {expanded && (
@@ -122,19 +115,17 @@ export function StoreCard({ result, best, onRetry }: StoreCardProps) {
           <span className="store-card__icon" aria-hidden="true">
             ⌕
           </span>
-          <p>Sin resultados claros para esta búsqueda.</p>
+          <h3>Sin coincidencias</h3>
+          <p>No hemos encontrado resultados claros para esta búsqueda.</p>
         </div>
       ) : (
         <div className="store-card__state store-card__state--error">
           <span className="store-card__icon" aria-hidden="true">
             !
           </span>
+          <h3>No se pudo consultar</h3>
           <p>{result.error ?? 'No se pudo consultar la tienda.'}</p>
-          <button
-            className="button-secondary"
-            type="button"
-            onClick={onRetry}
-          >
+          <button className="button-secondary" type="button" onClick={onRetry}>
             Reintentar
           </button>
         </div>

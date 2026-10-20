@@ -29,9 +29,13 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main">
+        Saltar al contenido
+      </a>
+
       <Header />
 
-      <main className="main">
+      <main className="main" id="main">
         <section className="hero">
           <SearchBar
             value={query}

@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Comparador de precios en siete tiendas: Alcampo, MediaMarkt Canarias, Nalber, El Faro, Lalo, App Informática y Leroy Merlin (stock en La Laguna)",
+  "description": "Comparador de precios en cinco tiendas: MediaMarkt Canarias, Nalber, El Faro, Lalo y App Informática",
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=20.19"
@@ -18,11 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:lines": "node scripts/check-file-length.mjs",
-    "verify": "pnpm check:lines && pnpm typecheck && pnpm test && pnpm build",
-    "leroy:login": "tsx scripts/leroy-merlin-login.ts",
-    "leroy:sync": "tsx scripts/leroy-merlin-sync.ts",
-    "sync": "tsx scripts/sync-store.ts",
-    "sync:login": "tsx scripts/sync-login.ts"
+    "verify": "pnpm check:lines && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

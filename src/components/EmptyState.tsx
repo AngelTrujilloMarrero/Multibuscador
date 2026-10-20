@@ -5,16 +5,35 @@ interface EmptyStateProps {
   onExample: (query: string) => void;
 }
 
+const STEPS = [
+  {
+    number: '1',
+    title: 'Escribe el producto',
+    text: 'Un modelo, una marca o una categoría. Con dos palabras basta.'
+  },
+  {
+    number: '2',
+    title: 'Comparamos en paralelo',
+    text: 'Consultamos las cinco tiendas a la vez y descartamos lo que no encaja.'
+  },
+  {
+    number: '3',
+    title: 'Elige el mejor precio',
+    text: 'Cada tarjeta abre la ficha real del producto en la tienda.'
+  }
+];
+
 export function EmptyState({ onExample }: EmptyStateProps) {
   return (
     <section className="empty">
       <div className="empty__intro">
+        <span className="empty__eyebrow">Cinco tiendas, una sola búsqueda</span>
         <h1>
-          Un producto. {STORE_ORDER.length} tiendas. Un solo vistazo.
+          Encuentra el mejor precio <span>sin abrir cinco pestañas</span>.
         </h1>
         <p>
-          Busca el nombre del producto y compara al instante la foto y el precio
-          que ofrece cada establecimiento.
+          Busca el nombre del producto y compara al instante la foto, el precio
+          y el enlace de cada establecimiento.
         </p>
       </div>
 
@@ -45,6 +64,20 @@ export function EmptyState({ onExample }: EmptyStateProps) {
           </button>
         ))}
       </div>
+
+      <ol className="steps" aria-label="Cómo funciona">
+        {STEPS.map((step) => (
+          <li className="steps__item" key={step.number}>
+            <span className="steps__number" aria-hidden="true">
+              {step.number}
+            </span>
+            <div>
+              <h2 className="steps__title">{step.title}</h2>
+              <p className="steps__text">{step.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

@@ -224,7 +224,11 @@ export const alcampoAdapter: StoreAdapter = {
     try {
       const html = await fetchWithChrome(url, signal);
 
-      if (isAlcampoChallenge(html)) {
+      if (
+        isAlcampoChallenge(html) ||
+        html.includes('403 ERROR') ||
+        html.includes('CloudFront')
+      ) {
         blockedUntil = Date.now() + CHALLENGE_COOLDOWN_MS;
         throw new WafChallengeError(url);
       }

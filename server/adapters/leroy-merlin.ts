@@ -251,18 +251,23 @@ export const leroyMerlinAdapter: StoreAdapter = {
         } catch (error) {
           if (error instanceof BotProtectionError) {
             blocked = true;
-          }
-
-          try {
-            const html = await fetchText(url, signal);
-            return parseLeroyMerlinListings(html);
-          } catch (fetchError) {
-            if (fetchError instanceof BotProtectionError) {
-              blocked = true;
-            }
-
             return [];
           }
+
+          if (String(error).includes('Chrome no disponible')) {
+            try {
+              const html = await fetchText(url, signal);
+              return parseLeroyMerlinListings(html);
+            } catch (fetchError) {
+              if (fetchError instanceof BotProtectionError) {
+                blocked = true;
+              }
+
+              return [];
+            }
+          }
+
+          return [];
         }
       })
     );

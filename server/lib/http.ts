@@ -11,79 +11,66 @@ const JSON_HEADERS = {
 };
 
 export interface ProxyConfig {
-  template?: string;
-  apiKey?: string;
-  headers?: Record<string, string>;
-  provider?: string;
+  template: string;
+  store: string;
 }
 
-interface ProxyPreset {
-  env: string;
-  provider: string;
-  build: (apiKey: string, env: Record<string, string | undefined>) => string;
-}
+const STORE_BY_HOST: Record<string, string> = {
+  'compraonline.alcampo.es': 'alcampo',
+  'www.compraonline.alcampo.es': 'alcampo',
+  'leroymerlin.es': 'leroy-merlin',
+  'www.leroymerlin.es': 'leroy-merlin'
+};
 
-const PROXY_PRESETS: ProxyPreset[] = [
-  {
-    env: 'SCRAPER_API_KEY',
-    provider: 'ScraperAPI',
-    build: (apiKey, env) => {
-      const renderJs = env.SCRAPER_RENDER_JS === 'true' ? '&render_js=true' : '';
-      return `https://api.scraperapi.com?api_key=${apiKey}&url={url}${renderJs}`;
-    }
-  },
-  {
-    env: 'ZYTE_API_KEY',
-    provider: 'Zyte',
-    build: (apiKey) =>
-      `https://api.zyte.com/v1/extract?url={url}&apikey=${apiKey}`
-  },
-  {
-    env: 'SCRAPINGBEE_API_KEY',
-    provider: 'ScrapingBee',
-    build: (apiKey) =>
-      `https://app.scrapingbee.com/api/v1/?api_key=${apiKey}&url={url}`
+/**
+ * Cada tienda protegida tiene su propia variable de entorno:
+ * `ALCAMPO_PROXY` y `LEROY_MERLIN_PROXY`. El valor puede ser la clave de un
+ * servicio de proxy (ScraperAPI) o la URL completa de tu propio proxy.
+ */
+const PROXY_ENV_BY_STORE: Record<string, string> = {
+  alcampo: 'ALCAMPO_PROXY',
+  'leroy-merlin': 'LEROY_MERLIN_PROXY'
+};
+
+function storeOfUrl(url: string): string | null {
+  try {
+    return STORE_BY_HOST[new URL(url).hostname] ?? null;
+  } catch {
+    return null;
   }
-];
+}
+
+export function buildProxyTemplate(value: string): string {
+  if (value.includes('{url}')) {
+    return value;
+  }
+
+  if (value.includes('://')) {
+    const separator = value.includes('?') ? '&' : '?';
+    return `${value}${separator}url={url}`;
+  }
+
+  return `https://api.scraperapi.com?api_key=${value}&url={url}`;
+}
 
 export function readProxyConfig(
+  url: string,
   env: Record<string, string | undefined> = process.env
 ): ProxyConfig | null {
-  const template = env.PROXY_URL_TEMPLATE?.trim();
+  const store = storeOfUrl(url);
 
-  let headers: Record<string, string> | undefined;
-
-  if (env.PROXY_HEADERS) {
-    try {
-      headers = JSON.parse(env.PROXY_HEADERS) as Record<string, string>;
-    } catch {
-      headers = undefined;
-    }
+  if (!store) {
+    return null;
   }
 
-  if (template) {
-    return {
-      template,
-      apiKey: env.PROXY_API_KEY,
-      headers,
-      provider: 'personalizado'
-    };
+  const variable = PROXY_ENV_BY_STORE[store];
+  const value = variable ? env[variable]?.trim() : undefined;
+
+  if (!value) {
+    return null;
   }
 
-  for (const preset of PROXY_PRESETS) {
-    const apiKey = env[preset.env]?.trim();
-
-    if (apiKey) {
-      return {
-        template: preset.build(apiKey, env),
-        apiKey,
-        headers,
-        provider: preset.provider
-      };
-    }
-  }
-
-  return null;
+  return { template: buildProxyTemplate(value), store };
 }
 
 export function buildRequestUrl(
@@ -96,15 +83,7 @@ export function buildRequestUrl(
 
   return config.template
     .replaceAll('{url}', encodeURIComponent(url))
-    .replaceAll('{url_raw}', url)
-    .replaceAll('{api_key}', config.apiKey ?? '');
-}
-
-function buildHeaders(
-  config: ProxyConfig | null,
-  base: Record<string, string>
-): Record<string, string> {
-  return config?.headers ? { ...base, ...config.headers } : base;
+    .replaceAll('{url_raw}', url);
 }
 
 let proxyLogged = false;
@@ -117,7 +96,7 @@ function logProxyOnce(config: ProxyConfig | null): void {
   proxyLogged = true;
 
   if (config) {
-    console.log(`[proxy] consultas a las tiendas vía ${config.provider}`);
+    console.log(`[proxy] ${config.store} consulta vía proxy`);
   }
 }
 
@@ -171,56 +150,6 @@ function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-const STORE_BY_HOST: Record<string, string> = {
-  'compraonline.alcampo.es': 'alcampo',
-  'www.compraonline.alcampo.es': 'alcampo',
-  'leroymerlin.es': 'leroy-merlin',
-  'www.leroymerlin.es': 'leroy-merlin'
-};
-
-export function readProxyStores(
-  env: Record<string, string | undefined> = process.env
-): string[] | null {
-  const raw = env.PROXY_STORES?.trim();
-
-  if (!raw) {
-    return null;
-  }
-
-  return raw
-    .split(',')
-    .map((store) => store.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function storeOfUrl(url: string): string | null {
-  try {
-    return STORE_BY_HOST[new URL(url).hostname] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Decide si una petición concreta debe ir por el proxy. Con `PROXY_STORES`
- * solo se enrutan las tiendas indicadas (por ejemplo Alcampo y Leroy Merlin),
- * así el proxy no se gasta en las tiendas que ya funcionan.
- */
-export function shouldUseProxy(
-  url: string,
-  env: Record<string, string | undefined> = process.env
-): boolean {
-  const stores = readProxyStores(env);
-
-  if (!stores) {
-    return true;
-  }
-
-  const store = storeOfUrl(url);
-
-  return store !== null && stores.includes(store);
-}
-
 export async function fetchText(
   url: string,
   signal: AbortSignal,
@@ -228,9 +157,8 @@ export async function fetchText(
   headers: Record<string, string> = DEFAULT_HEADERS
 ): Promise<string> {
   let lastError: unknown;
-  const proxy = shouldUseProxy(url) ? readProxyConfig() : null;
+  const proxy = readProxyConfig(url);
   const requestUrl = buildRequestUrl(url, proxy);
-  const requestHeaders = buildHeaders(proxy, headers);
 
   logProxyOnce(proxy);
 
@@ -239,7 +167,7 @@ export async function fetchText(
       const response = await fetch(requestUrl, {
         signal,
         redirect: 'follow',
-        headers: requestHeaders
+        headers
       });
 
       if (isChallenge(response)) {

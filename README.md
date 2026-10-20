@@ -99,11 +99,8 @@ Las variables de entorno en Vercel (Settings → Environment Variables):
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 
 Sin KV la app sigue funcionando con la caché en memoria de cada instancia, pero
-en serverless cada instancia nueva vuelve a preguntar a las tiendas. Cuanto más
-alto `CACHE_TTL_SECONDS`, menos peticiones salen hacia las tiendas.
-
-También se cachea el descubrimiento de productos de Leroy Merlin (24 h), para no
-volver a descargar sus sitemaps públicos en cada petición.
+en serverless cada instancia nueva vuelve a preguntar a las tiendas. También se
+cachea el descubrimiento de productos de Leroy Merlin (24 h).
 
 ## Fuentes de datos por tienda
 
@@ -138,42 +135,42 @@ indica qué ha pasado y el resto de tiendas sigue funcionando.
 Si una tienda está protegida, conviene abrir su web en el navegador con
 normalidad y volver a probar la búsqueda.
 
-### Proxy de scraping (variables de entorno en Vercel)
+### Proxy de scraping (dos variables)
 
-Como los bloqueos dependen de la IP de salida, puedes enrutar todas las
-peticiones a las tiendas por un proxy. Lo único que tienes que hacer es pegar la
-clave en *Vercel → Project Settings → Environment Variables* y redesplegar; la
-app se encarga de armar la URL. La clave nunca llega al navegador.
+Alcampo y Leroy Merlin son las únicas tiendas que necesitan proxy; las otras
+cinco van siempre en directo. Solo tienes que crear **dos variables** en Vercel
+(Settings → Environment Variables):
 
-| Variable | Servicio | Nota |
-| --- | --- | --- |
-| `SCRAPER_API_KEY` | ScraperAPI | Añade `SCRAPER_RENDER_JS=true` para usar un navegador real (ayuda con WAF/captcha) |
-| `ZYTE_API_KEY` | Zyte | |
-| `SCRAPINGBEE_API_KEY` | ScrapingBee | |
-| `PROXY_STORES` | — | `alcampo,leroy-merlin`: solo esas dos tiendas van por el proxy, el resto en directo (ahorra créditos) |
-| `PROXY_URL_TEMPLATE` | Cualquiera o proxy propio | Plantilla con `{url}`, `{url_raw}` y `{api_key}`; tiene prioridad sobre las anteriores |
-| `PROXY_API_KEY` | Plantilla personalizada | |
-| `PROXY_HEADERS` | Todos | Cabeceras extra en JSON |
+| Variable | Para qué sirve |
+| --- | --- |
+| `ALCAMPO_PROXY` | Proxy solo para Alcampo |
+| `LEROY_MERLIN_PROXY` | Proxy solo para Leroy Merlin |
 
-En el log de la función verás `[proxy] consultas a las tiendas vía <servicio>`
-cuando está activo.
+El valor puede ser:
+
+- la **clave** de un servicio de proxy (se asume ScraperAPI):
+  `ALCAMPO_PROXY=mi-clave-scraperapi`
+- o la **URL completa** de tu proxy (con `{url}` o sin ella):
+  `ALCAMPO_PROXY=https://api.scraperapi.com?api_key=mi-clave&url={url}`
+  `ALCAMPO_PROXY=https://mi-proxy.example/?token=secreto`
+
+Si no se definen, esas tiendas se consultan directamente y puede que muestren el
+aviso de bloqueo anti-bot. En el log de la función verás
+`[proxy] alcampo consulta vía proxy` cuando está activo.
 
 ## Despliegue en Vercel
 
 El repositorio ya incluye lo necesario para publicar la web y la API en Vercel:
-
-- `vercel.json` define el build de Vite, la función `api/[...path].ts` (Express
-  completo en una sola función serverless) y el fallback de la SPA.
-- `api/[...path].ts` exporta la app Express, de forma que `/api/search` y
-  `/api/health` funcionan en el mismo dominio que la web.
+`vercel.json` define el build de Vite, la función `api/[...path].ts` (Express
+completo en una sola función serverless) y el fallback de la SPA. Así
+`/api/search` y `/api/health` funcionan en el mismo dominio que la web.
 
 Al ser funciones serverless, la caché en memoria y el deduplicado de
-peticiones solo viven mientras la instancia esté caliente: para un volumen alto
-conviene añadir una caché externa (Vercel KV o Redis).
-
-Como las funciones salen desde IPs de datacenter, es probable que Alcampo y
-Leroy Merlin muestren el aviso de bloqueo con más frecuencia que en local. La
-variable `PROXY_URL_TEMPLATE` es la forma más sencilla de evitarlo.
+peticiones solo viven mientras la instancia esté caliente: por eso conviene
+conectar un KV. Y como las funciones salen desde IPs de datacenter, Alcampo y
+Leroy Merlin muestran el aviso de bloqueo más a menudo que en local: las
+variables `ALCAMPO_PROXY` y `LEROY_MERLIN_PROXY` son la forma más sencilla de
+evitarlo.
 
 ## API
 

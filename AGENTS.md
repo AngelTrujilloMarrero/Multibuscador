@@ -67,18 +67,13 @@ pnpm verify           # check:lines + typecheck + test + build
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Vercel KV) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
-| `SCRAPER_API_KEY` | Proxy ScraperAPI (arma la URL solo) |
-| `PROXY_STORES` | Tiendas que van por el proxy (por ejemplo `alcampo,leroy-merlin`) |
-| `ZYTE_API_KEY` | Proxy Zyte |
-| `SCRAPINGBEE_API_KEY` | Proxy ScrapingBee |
-| `SCRAPER_RENDER_JS` | ScraperAPI con navegador real |
-| `PROXY_URL_TEMPLATE` | Plantilla personalizada (`{url}`, `{url_raw}`, `{api_key}`), prioritaria |
-| `PROXY_API_KEY` | Clave de la plantilla personalizada |
-| `PROXY_HEADERS` | Cabeceras extra del proxy en JSON |
+| `ALCAMPO_PROXY` | Proxy solo para Alcampo (clave o URL de proxy) |
+| `LEROY_MERLIN_PROXY` | Proxy solo para Leroy Merlin (clave o URL de proxy) |
 
-Si se define `PROXY_URL_TEMPLATE`, todas las peticiones a las tiendas pasan por
-el proxy, lo que evita los bloqueos por IP de AWS WAF (Alcampo) y DataDome
-(Leroy Merlin). La clave nunca se expone al cliente.
+Si se define `ALCAMPO_PROXY` o `LEROY_MERLIN_PROXY`, solo esas tiendas van por el
+proxy, lo que evita los bloqueos por IP de AWS WAF (Alcampo) y DataDome (Leroy
+Merlin). Las demás tiendas van siempre en directo. La clave nunca se expone al
+cliente.
 
 Si hay caché compartida (KV/Upstash), una sola petición a las tiendas sirve a
 todos los usuarios: es la forma más efectiva de no disparar los bloqueos. No

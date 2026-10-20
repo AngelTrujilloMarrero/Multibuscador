@@ -53,7 +53,32 @@ pnpm dev:web
 pnpm dev:api
 ```
 
-## Build y ejecución local
+## Comprobaciones
+
+```bash
+pnpm check:lines   # Ningún archivo escrito a mano supera 300 líneas
+pnpm typecheck     # TypeScript estricto en frontend y backend
+pnpm test          # Tests de parsers, matching y utilidades
+pnpm build         # Typecheck + build de producción
+pnpm verify        # Todo lo anterior en orden
+```
+
+## Despliegue
+
+### Vercel (recomendado)
+
+El repositorio ya incluye `vercel.json` y `api/[...path].ts`, así que basta con
+importar el repositorio en Vercel:
+
+- Build command: `pnpm build`
+- Output directory: `dist`
+- Node.js: 20 o superior
+
+La API Express queda expuesta en `/api` del mismo dominio y la web se sirve
+desde `dist`. No se necesitan proxies: las cinco tiendas consultadas no bloquean
+el acceso desde Vercel.
+
+### Local
 
 ```bash
 pnpm build
@@ -67,16 +92,6 @@ El puerto se puede cambiar con `PORT`:
 
 ```bash
 PORT=9000 pnpm start
-```
-
-## Comprobaciones
-
-```bash
-pnpm check:lines   # Ningún archivo escrito a mano supera 300 líneas
-pnpm typecheck     # TypeScript estricto en frontend y backend
-pnpm test          # Tests de parsers, matching y utilidades
-pnpm build         # Typecheck + build de producción
-pnpm verify        # Todo lo anterior en orden
 ```
 
 ## Caché compartida: una petición, muchos usuarios

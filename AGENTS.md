@@ -74,9 +74,11 @@ dependencias para la caché: `server/lib/kv.ts` habla con la API REST.
 
 ## Despliegue
 
-- **Local**: `pnpm dev` o `pnpm build && pnpm start`. Es la única opción
-  soportada: sale desde una IP residencial, que es lo que mejor funciona con los
-  catálogos de estas tiendas.
+- **Vercel**: importa el repositorio; `vercel.json` ya configura el build de
+  Vite, la función serverless `api/[...path].ts` y el fallback SPA. No se
+  necesitan proxies.
+- **Local**: `pnpm dev` o `pnpm build && pnpm start`. Útil para desarrollo y
+  para probar búsquedas reales.
 
 ## Estructura
 

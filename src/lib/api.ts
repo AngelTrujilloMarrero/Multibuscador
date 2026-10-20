@@ -2,6 +2,13 @@ import type { SearchResponse } from '../../shared/types';
 
 const FALLBACK_MESSAGE = 'No se pudo completar la búsqueda.';
 
+/**
+ * Base de la API. Por defecto es el mismo dominio (la función serverless de
+ * Vercel). Se puede cambiar a `VITE_API_URL` para apuntar a una API que
+ * funcione desde una IP residencial (por ejemplo en casa con un túnel).
+ */
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+
 interface ErrorPayload {
   error?: unknown;
   message?: unknown;
@@ -60,10 +67,13 @@ export async function searchProducts(
   query: string,
   signal?: AbortSignal
 ): Promise<SearchResponse> {
-  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-    signal,
-    headers: { accept: 'application/json' }
-  });
+  const response = await fetch(
+    `${API_BASE}/api/search?q=${encodeURIComponent(query)}`,
+    {
+      signal,
+      headers: { accept: 'application/json' }
+    }
+  );
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));

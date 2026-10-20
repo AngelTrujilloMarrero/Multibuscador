@@ -64,6 +64,8 @@ pnpm verify           # check:lines + typecheck + test + build
 | Variable | Para qué sirve |
 | --- | --- |
 | `PORT` | Puerto del servidor Express (8787 por defecto) |
+| `VITE_API_URL` | URL de la API que llama el navegador (vacío = mismo dominio) |
+| `ALLOWED_ORIGIN` | Orígenes permitidos por CORS |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Vercel KV) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |

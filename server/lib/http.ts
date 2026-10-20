@@ -169,25 +169,7 @@ export async function fetchText(
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await fetch(requestUrl, {
-        signal,
-        redirect: 'follow',
-        headers
-      });
-
-      if (isChallenge(response)) {
-        throw new WafChallengeError(url);
-      }
-
-      if (!response.ok) {
-        if (response.status === 403 || response.status === 429) {
-          throw new BotProtectionError(response.status, url);
-        }
-
-        throw new HttpError(response.status, url);
-      }
-
-      return await response.text();
+      return await requestOnce(requestUrl, url, signal, headers);
     } catch (error) {
       lastError = error;
 
@@ -207,7 +189,45 @@ export async function fetchText(
     }
   }
 
+  // El WAF de Alcampo responde con un reto durante una ventana de tiempo:
+  // alguna petición sí pasa, así que se reintenta una vez con margen.
+  if (lastError instanceof WafChallengeError) {
+    try {
+      await abortableDelay(1500, signal);
+      return await requestOnce(requestUrl, url, signal, headers);
+    } catch {
+      throw lastError;
+    }
+  }
+
   throw lastError;
+}
+
+async function requestOnce(
+  requestUrl: string,
+  url: string,
+  signal: AbortSignal,
+  headers: Record<string, string>
+): Promise<string> {
+  const response = await fetch(requestUrl, {
+    signal,
+    redirect: 'follow',
+    headers
+  });
+
+  if (isChallenge(response)) {
+    throw new WafChallengeError(url);
+  }
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 429) {
+      throw new BotProtectionError(response.status, url);
+    }
+
+    throw new HttpError(response.status, url);
+  }
+
+  return await response.text();
 }
 
 export async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {

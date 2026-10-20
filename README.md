@@ -75,7 +75,7 @@ pnpm build         # Typecheck + build de producción
 pnpm verify        # Todo lo anterior en orden
 ```
 
-## Cache compartida: una petición, muchos usuarios
+## Caché compartida: una petición, muchos usuarios
 
 > 📄 Plan 100 % gratuito (KV, Alcampo, Leroy Merlin y servicios externos con
 > plan gratis) en **[PLAN-GRATUITO.md](PLAN-GRATUITO.md)**.
@@ -161,19 +161,36 @@ Si no se definen, esas tiendas se consultan directamente y puede que muestren el
 aviso de bloqueo anti-bot. En el log de la función verás
 `[proxy] alcampo consulta vía proxy` cuando está activo.
 
+## Por qué Alcampo y Leroy Merlin fallan en Vercel
+
+La IP que cuenta es **la del servidor que hace la petición**, no la tuya: si
+cambias tu IP o te pones un VPN, la función de Vercel sigue saliendo por la IP
+de Vercel (compartida con otros clientes y ya marcada). Alcampo (AWS WAF) y
+Leroy Merlin (DataDome) bloquean por IP y por volumen, así que desde Vercel es
+normal ver esos dos avisos.
+
+La salida gratuita es **que la API salga desde tu casa** (IP residencial), con la
+web en Vercel:
+
+```bash
+pnpm start                                        # API en :8787
+cloudflared tunnel --url http://localhost:8787     # túnel gratuito
+```
+
+Y en Vercel, una variable y redesplegar:
+`VITE_API_URL=https://<tu-tunnel>.trycloudflare.com`
+
+El backend ya trae CORS para el dominio de Vercel y el frontend acepta
+`VITE_API_URL`. Con la API en casa, Alcampo vuelve a responder con normalidad
+(verificado: 200 con el JSON `productEntities`).
+
 ## Despliegue en Vercel
 
-El repositorio ya incluye lo necesario para publicar la web y la API en Vercel:
 `vercel.json` define el build de Vite, la función `api/[...path].ts` (Express
 completo en una sola función serverless) y el fallback de la SPA. Así
-`/api/search` y `/api/health` funcionan en el mismo dominio que la web.
-
-Al ser funciones serverless, la caché en memoria y el deduplicado de
-peticiones solo viven mientras la instancia esté caliente: por eso conviene
-conectar un KV. Y como las funciones salen desde IPs de datacenter, Alcampo y
-Leroy Merlin muestran el aviso de bloqueo más a menudo que en local: las
+`/api/search` y `/api/health` funcionan en el mismo dominio que la web. Las
 variables `ALCAMPO_PROXY` y `LEROY_MERLIN_PROXY` son la forma más sencilla de
-evitarlo.
+evitar los bloqueos sin mover la API.
 
 ## API
 
@@ -190,19 +207,12 @@ evitarlo.
   "query": "teclado",
   "cached": false,
   "tookMs": 2450,
-  "bestPrice": {
-    "store": "nalber",
-    "storeName": "Nalber",
-    "price": 9.63
-  },
+  "bestPrice": { "store": "nalber", "storeName": "Nalber", "price": 9.63 },
   "results": [
     {
       "store": "leroy-merlin",
       "name": "Leroy Merlin",
-      "shortName": "LM",
-      "color": "#78be20",
       "status": "ok",
-      "fetchedAt": "2026-10-20T10:00:00.000Z",
       "tookMs": 1200,
       "products": [
         {
@@ -211,11 +221,7 @@ evitarlo.
           "currency": "EUR",
           "imageUrl": "https://...",
           "productUrl": "https://...",
-          "availability": {
-            "store": "La Laguna",
-            "inStock": true,
-            "text": "A partir de 2 días La Laguna GRATIS"
-          }
+          "availability": { "store": "La Laguna", "inStock": true }
         }
       ]
     }
@@ -231,21 +237,12 @@ Límites: 40 peticiones por minuto y por IP, consulta de 2 a 80 caracteres.
 ## Estructura
 
 ```text
-src/
-  components/       Tarjetas, buscador, estados y resumen
-  hooks/            Estado de búsqueda y abortos
-  lib/              API, formato, historial y metadatos
-  styles/           CSS dividido en base, layout, componentes, estados y resultados
-server/
-  adapters/         Un archivo por tienda y parser PrestaShop común
-  lib/              HTTP, caché, matching, rate limit, sitemaps, texto y JSON
-  routes/           Endpoint de búsqueda
-  services/         Búsqueda paralela, timeout, caché y mejor precio
-  __fixtures__/     HTML/JSON/XML para tests
-shared/
-  types.ts          Tipos compartidos
-scripts/
-  check-file-length.mjs
+src/            Frontend React (components, hooks, lib, styles)
+server/         Backend Express (adapters por tienda, lib, routes, services)
+server/__fixtures__/  HTML/JSON/XML de ejemplo para los tests
+shared/         Tipos compartidos
+api/            Función serverless para Vercel
+scripts/        check-file-length y sincronización de Leroy Merlin
 ```
 
 ## Añadir una tienda

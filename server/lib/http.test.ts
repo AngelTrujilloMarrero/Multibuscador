@@ -55,6 +55,25 @@ describe('fetchText', () => {
       fetchText('https://ejemplo.test', signal())
     ).rejects.toBeInstanceOf(HttpError);
   });
+
+  it('reintenta una vez cuando el WAF devuelve un reto', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('<html></html>', {
+          status: 202,
+          headers: { 'x-amzn-waf-action': 'challenge' }
+        })
+      )
+      .mockResolvedValueOnce(new Response('contenido', { status: 200 }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchText('https://ejemplo.test', signal())).resolves.toBe(
+      'contenido'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('proxy por tienda', () => {

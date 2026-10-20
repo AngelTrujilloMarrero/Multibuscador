@@ -1,5 +1,6 @@
 import express from 'express';
 import type { ErrorRequestHandler } from 'express';
+import { cors } from './lib/cors.js';
 import { rateLimit } from './lib/rate-limit.js';
 import { searchRouter } from './routes/search.js';
 
@@ -8,6 +9,7 @@ export function createApp(): express.Express {
 
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
+  app.use(cors());
   app.use(express.json({ limit: '16kb' }));
   app.use('/api', rateLimit({ windowMs: 60_000, max: 40 }));
 

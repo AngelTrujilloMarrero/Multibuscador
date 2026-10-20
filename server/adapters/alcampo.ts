@@ -5,8 +5,7 @@ import { absoluteUrl, dedupeProducts, parsePrice } from '../lib/text.js';
 import type { StoreAdapter } from './types.js';
 
 const BASE_URL = 'https://www.compraonline.alcampo.es';
-const BASE_COOLDOWN_MS = 2 * 60 * 1000;
-const MAX_COOLDOWN_MS = 15 * 60 * 1000;
+const CHALLENGE_COOLDOWN_MS = 5 * 60 * 1000;
 const CHALLENGE_MARKERS = [
   'awsWafCookieDomainList',
   'Human Verification',
@@ -14,7 +13,6 @@ const CHALLENGE_MARKERS = [
 ];
 
 let blockedUntil = 0;
-let cooldownMs = BASE_COOLDOWN_MS;
 
 export function isAlcampoChallenge(html: string): boolean {
   return CHALLENGE_MARKERS.some((marker) => html.includes(marker));
@@ -101,13 +99,10 @@ export const alcampoAdapter: StoreAdapter = {
         throw new WafChallengeError(url);
       }
 
-      cooldownMs = BASE_COOLDOWN_MS;
-
       return parseAlcampo(html);
     } catch (error) {
       if (error instanceof WafChallengeError) {
-        blockedUntil = Date.now() + cooldownMs;
-        cooldownMs = Math.min(cooldownMs * 2, MAX_COOLDOWN_MS);
+        blockedUntil = Date.now() + CHALLENGE_COOLDOWN_MS;
       }
 
       throw error;

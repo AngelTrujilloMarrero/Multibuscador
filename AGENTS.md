@@ -162,10 +162,10 @@ actualiza su parser, añade o ajusta el fixture y ejecuta `pnpm test`.
 
 Alcampo está detrás de AWS WAF y, si detecta demasiado tráfico, responde con una
 página de verificación humana (`202` o el texto `challenge-container`). El
-adaptador detecta esa situación y espera antes de volver a intentarlo (2 min,
-luego 5 y 10, hasta 15) para no agravar el bloqueo. No intentes saltarte el
-reto: la tarjeta debe explicar qué ocurre y las demás tiendas deben seguir
-respondiendo.
+adaptador detecta esa situación, espera 5 minutos antes de volver a intentarlo y
+devuelve un error claro en lugar de fingir que no hay productos. No intentes
+saltarte el reto: la tarjeta debe explicar qué ocurre y las demás tiendas deben
+seguir respondiendo.
 
 ### Leroy Merlin y el stock en La Laguna
 

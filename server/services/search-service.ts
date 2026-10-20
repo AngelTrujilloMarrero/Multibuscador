@@ -162,7 +162,7 @@ async function runAdapter(
 
 function buildErrorMessage(error: unknown, aborted: boolean): string {
   if (error instanceof WafChallengeError) {
-    return 'La tienda pide verificación humana (protección anti-bot). Espera unos minutos y vuelve a intentarlo.';
+    return 'La tienda pide verificación humana. Inténtalo de nuevo en unos minutos.';
   }
 
   if (error instanceof BotProtectionError) {

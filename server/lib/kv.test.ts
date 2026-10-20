@@ -11,10 +11,10 @@ afterEach(() => {
 });
 
 describe('readKvConfig', () => {
-  it('acepta las variables de Vercel KV y de Upstash', () => {
+  it('acepta las variables de KV y de Upstash', () => {
     expect(
-      readKvConfig({ KV_REST_API_URL: 'https://x.kv.vercel-storage.com', KV_REST_API_TOKEN: 't' })
-    ).toEqual({ url: 'https://x.kv.vercel-storage.com', token: 't' });
+      readKvConfig({ KV_REST_API_URL: 'https://x.kv.example.com', KV_REST_API_TOKEN: 't' })
+    ).toEqual({ url: 'https://x.kv.example.com', token: 't' });
 
     expect(
       readKvConfig({
@@ -50,7 +50,7 @@ describe('readCacheTtl', () => {
 });
 
 describe('KV', () => {
-  const config = { url: 'https://x.kv.vercel-storage.com', token: 't' };
+  const config = { url: 'https://x.kv.example.com', token: 't' };
 
   it('lee un valor con la API REST', async () => {
     const fetchMock = vi.fn(async () =>
@@ -62,7 +62,7 @@ describe('KV', () => {
       '{"query":"teclado"}'
     );
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      'https://x.kv.vercel-storage.com/get/search%3Ateclado'
+      'https://x.kv.example.com/get/search%3Ateclado'
     );
   });
 
@@ -73,7 +73,7 @@ describe('KV', () => {
     await setCachedValue('search:teclado', '{}', 900, config);
 
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe('https://x.kv.vercel-storage.com/set/search%3Ateclado');
+    expect(url).toBe('https://x.kv.example.com/set/search%3Ateclado');
     expect(init?.body).toBe(JSON.stringify(['{}', 'EX', '900']));
   });
 

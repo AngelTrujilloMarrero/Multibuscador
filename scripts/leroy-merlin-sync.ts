@@ -10,7 +10,7 @@ import { normalizeText } from '../server/lib/text.js';
 
 const execFileAsync = promisify(execFile);
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '..');
-const PROFILE_DIR = path.join(PROJECT_ROOT, '.chrome-leroy');
+const PROFILE_DIR = path.join(PROJECT_ROOT, '.chrome-sync');
 const CHROME_PATHS = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/usr/bin/google-chrome',

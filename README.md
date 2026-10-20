@@ -85,25 +85,25 @@ puede ser cada usuario el que pide el dato a la tienda**. Si cada visita (y cada
 instancia serverless) consulta a Alcampo o Leroy Merlin, el volumen de peticiones
 dispara sus protecciones anti-bot.
 
-Con una caché compartida (Vercel KV o Upstash) el flujo es:
+Con una caché compartida (Upstash/Redis) el flujo es:
 
 ```
-usuario A → función Vercel → tiendas (1 petición) ─┐
-usuario B → función Vercel → caché compartida ──────┴→ misma respuesta
-usuario C → función Vercel → caché compartida
+usuario A → servidor → tiendas (1 petición) ─┐
+usuario B → servidor → caché compartida ──────┴→ misma respuesta
+usuario C → servidor → caché compartida
 ```
 
-Las variables de entorno en Vercel (Settings → Environment Variables):
+Variables de entorno:
 
 | Variable | Para qué sirve |
 | --- | --- |
-| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Vercel KV (Storage → KV) |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Caché compartida (Upstash/Redis) |
 | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Alternativa con Upstash |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 
-Sin KV la app sigue funcionando con la caché en memoria de cada instancia, pero
-en serverless cada instancia nueva vuelve a preguntar a las tiendas. También se
-cachea el descubrimiento de productos de Leroy Merlin (24 h).
+Sin caché compartida la app sigue funcionando con la caché en memoria del
+servidor. También se cachea el descubrimiento de productos de Leroy Merlin
+(24 h).
 
 ## Fuentes de datos por tienda
 
@@ -141,8 +141,8 @@ normalidad y volver a probar la búsqueda.
 ### Proxy de scraping (dos variables)
 
 Alcampo y Leroy Merlin son las únicas tiendas que necesitan proxy; las otras
-cinco van siempre en directo. Solo tienes que crear **dos variables** en Vercel
-(Settings → Environment Variables):
+cinco van siempre en directo. Define **dos variables** en `.env` (o en el
+entorno del servidor):
 
 | Variable | Para qué sirve |
 | --- | --- |
@@ -160,37 +160,6 @@ El valor puede ser:
 Si no se definen, esas tiendas se consultan directamente y puede que muestren el
 aviso de bloqueo anti-bot. En el log de la función verás
 `[proxy] alcampo consulta vía proxy` cuando está activo.
-
-## Por qué Alcampo y Leroy Merlin fallan en Vercel
-
-La IP que cuenta es **la del servidor que hace la petición**, no la tuya: si
-cambias tu IP o te pones un VPN, la función de Vercel sigue saliendo por la IP
-de Vercel (compartida con otros clientes y ya marcada). Alcampo (AWS WAF) y
-Leroy Merlin (DataDome) bloquean por IP y por volumen, así que desde Vercel es
-normal ver esos dos avisos.
-
-La salida gratuita es **que la API salga desde tu casa** (IP residencial), con la
-web en Vercel:
-
-```bash
-pnpm start                                        # API en :8787
-cloudflared tunnel --url http://localhost:8787     # túnel gratuito
-```
-
-Y en Vercel, una variable y redesplegar:
-`VITE_API_URL=https://<tu-tunnel>.trycloudflare.com`
-
-El backend ya trae CORS para el dominio de Vercel y el frontend acepta
-`VITE_API_URL`. Con la API en casa, Alcampo vuelve a responder con normalidad
-(verificado: 200 con el JSON `productEntities`).
-
-## Despliegue en Vercel
-
-`vercel.json` define el build de Vite, la función `api/[...path].ts` (Express
-completo en una sola función serverless) y el fallback de la SPA. Así
-`/api/search` y `/api/health` funcionan en el mismo dominio que la web. Las
-variables `ALCAMPO_PROXY` y `LEROY_MERLIN_PROXY` son la forma más sencilla de
-evitar los bloqueos sin mover la API.
 
 ## API
 
@@ -241,7 +210,6 @@ src/            Frontend React (components, hooks, lib, styles)
 server/         Backend Express (adapters por tienda, lib, routes, services)
 server/__fixtures__/  HTML/JSON/XML de ejemplo para los tests
 shared/         Tipos compartidos
-api/            Función serverless para Vercel
 scripts/        check-file-length y sincronización de Leroy Merlin
 ```
 

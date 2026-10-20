@@ -66,7 +66,7 @@ pnpm verify           # check:lines + typecheck + test + build
 | `PORT` | Puerto del servidor Express (8787 por defecto) |
 | `VITE_API_URL` | URL de la API que llama el navegador (vacío = mismo dominio) |
 | `ALLOWED_ORIGIN` | Orígenes permitidos por CORS |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Vercel KV) |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Upstash/Redis) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
 | `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 | `ALCAMPO_PROXY` | Proxy solo para Alcampo (clave o URL de proxy) |
@@ -83,11 +83,8 @@ añadas dependencias para la caché: `server/lib/kv.ts` habla con la API REST.
 
 ## Despliegue
 
-- **Vercel**: `vercel.json` + `api/[...path].ts` publican la web y la API en el
-  mismo dominio. En serverless la caché en memoria solo vive en instancias
-  calientes.
-- **Local**: `pnpm dev` o `pnpm build && pnpm start`. Es la opción con menos
-  bloqueos porque sale desde una IP residencial.
+- **Local**: `pnpm dev` o `pnpm build && pnpm start`. Es la única opción
+  soportada: sale desde una IP residencial y evita buena parte de los bloqueos.
 
 ## Estructura
 

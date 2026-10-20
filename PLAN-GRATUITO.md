@@ -4,16 +4,15 @@ Resumen de lo que cuesta cero y qué está probado (octubre 2026).
 
 ## 1. Caché compartida (0 €)
 
-Vercel KV / Upstash tienen plan gratuito y **no hay que escribir ninguna
-variable**: al conectar el store al proyecto, Vercel las inyecta.
+Upstash tiene plan gratuito; basta con poner las variables en `.env`.
 
 ```bash
-# En Vercel: Storage → Create Database → KV → Connect to project → Redeploy
+# Configura KV_REST_API_URL y KV_REST_API_TOKEN en .env (Upstash)
 ```
 
 Con KV, una sola petición a las tiendas sirve a todos los usuarios. Es la
 medida que más reduce los bloqueos, porque el volumen hacia Alcampo y Leroy
-Merlin deja de multiplicarse por usuario × instancia serverless.
+Merlin deja de multiplicarse por usuario.
 
 Variable opcional: `CACHE_TTL_SECONDS=3600` para servir más tiempo desde caché.
 
@@ -50,7 +49,7 @@ completes la verificación de DataDome. `leroy:sync` vuelve a lanzar Chrome sin
 ventana, extrae precio y stock de La Laguna de cada ficha y lo guarda en el KV
 con la clave `lm:productos:<consulta>`.
 
-La función de Vercel lee esa clave y sirve el resultado sin tocar la web de
+El servidor lee esa clave y sirve el resultado sin tocar la web de
 Leroy Merlin. Coste: 0 €.
 
 ## 4. Servicios externos con plan gratuito (0 €)
@@ -78,8 +77,8 @@ búsquedas: cada búsqueda de Leroy Merlin son ~6 URLs (familia + fichas).
 
 ## Resumen
 
-- Vercel: gratis (plan Hobby).
-- KV: gratis.
+- Servidor local: gratis.
+- KV: gratis (opcional).
 - Alcampo: gratis con la caché.
 - Leroy Merlin: gratis con `pnpm leroy:login` + `pnpm leroy:sync` en casa.
 - Si prefieres no tocar tu máquina, el plan gratuito de ScraperAPI/ScrapingBee

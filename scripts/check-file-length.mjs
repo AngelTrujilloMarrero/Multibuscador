@@ -7,6 +7,8 @@ const LIMIT = 300;
 const SKIP_DIRECTORIES = new Set([
   '.git',
   '.vite',
+  '.chrome-leroy',
+  '.chrome-sync',
   'coverage',
   'dist',
   'dist-server',

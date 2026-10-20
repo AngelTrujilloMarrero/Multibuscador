@@ -1,7 +1,8 @@
 import * as cheerio from 'cheerio';
 import type { Cheerio } from 'cheerio';
 import type { Product, ProductAvailability } from '../../shared/types.js';
-import { fetchText, XML_HEADERS } from '../lib/http.js';
+import { fetchText, XML_HEADERS, BotProtectionError } from '../lib/http.js';
+import { fetchWithChrome } from '../lib/browser.js';
 import { getCachedValue, readKvConfig } from '../lib/kv.js';
 import { absoluteUrl, dedupeProducts, normalizeText, parsePrice } from '../lib/text.js';
 import { findFamilyUrls } from './leroy-merlin-discovery.js';
@@ -10,7 +11,7 @@ import type { StoreAdapter } from './types.js';
 export { findFamilyUrls, scoreSlug } from './leroy-merlin-discovery.js';
 
 const BASE_URL = 'https://www.leroymerlin.es';
-const MAX_PRODUCT_PAGES = 5;
+const MAX_PRODUCT_PAGES = 3;
 
 export const STORE_NAME = 'La Laguna';
 
@@ -183,11 +184,22 @@ async function enrichWithProductPage(
   signal: AbortSignal
 ): Promise<Product> {
   try {
-    const html = await fetchText(product.productUrl, signal);
+    const html = await fetchWithChrome(product.productUrl, signal);
+
+    if (html.includes('datadome') || html.includes('cmsg')) {
+      return product;
+    }
+
     const detailed = parseLeroyMerlinProduct(html, product.productUrl);
     return detailed ?? product;
   } catch {
-    return product;
+    try {
+      const html = await fetchText(product.productUrl, signal);
+      const detailed = parseLeroyMerlinProduct(html, product.productUrl);
+      return detailed ?? product;
+    } catch {
+      return product;
+    }
   }
 }
 
@@ -223,14 +235,43 @@ export const leroyMerlinAdapter: StoreAdapter = {
       return [];
     }
 
+    let blocked = false;
+
     const pages = await Promise.all(
       familyUrls.map(async (url) => {
-        const html = await fetchText(url, signal);
-        return parseLeroyMerlinListings(html);
+        try {
+          const html = await fetchWithChrome(url, signal);
+
+          if (html.includes('datadome') || html.includes('cmsg')) {
+            blocked = true;
+            return [];
+          }
+
+          return parseLeroyMerlinListings(html);
+        } catch (error) {
+          if (error instanceof BotProtectionError) {
+            blocked = true;
+          }
+
+          try {
+            const html = await fetchText(url, signal);
+            return parseLeroyMerlinListings(html);
+          } catch (fetchError) {
+            if (fetchError instanceof BotProtectionError) {
+              blocked = true;
+            }
+
+            return [];
+          }
+        }
       })
     );
 
     const listings = dedupeProducts(pages.flat()).slice(0, MAX_PRODUCT_PAGES);
+
+    if (blocked && listings.length === 0) {
+      throw new BotProtectionError(403, familyUrls[0] ?? BASE_URL);
+    }
 
     return Promise.all(
       listings.map((product) => enrichWithProductPage(product, signal))

@@ -1,15 +1,13 @@
 import type { RequestHandler } from 'express';
 
 const DEFAULT_ORIGINS = [
-  'https://multibuscador.vercel.app',
   'http://localhost:5173',
   'http://localhost:8787'
 ];
 
 /**
- * CORS para poder servir la web desde Vercel y la API desde otro sitio
- * (por ejemplo, la API en casa con un túnel). Con `ALLOWED_ORIGIN` se limita
- * a los orígenes permitidos.
+ * CORS para desarrollo local. Con `ALLOWED_ORIGIN` se limita a los orígenes
+ * permitidos.
  */
 export function cors(): RequestHandler {
   const allowed = (process.env.ALLOWED_ORIGIN ?? '')

@@ -13,7 +13,7 @@ const CHROME_PATHS = [
 ];
 
 export const PROFILE_DIR = path.join(
-  path.resolve(import.meta.dirname, '..'),
+  path.resolve(import.meta.dirname, '..', '..'),
   '.chrome-sync'
 );
 

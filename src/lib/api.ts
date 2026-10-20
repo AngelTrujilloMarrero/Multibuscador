@@ -3,9 +3,8 @@ import type { SearchResponse } from '../../shared/types';
 const FALLBACK_MESSAGE = 'No se pudo completar la búsqueda.';
 
 /**
- * Base de la API. Por defecto es el mismo dominio (la función serverless de
- * Vercel). Se puede cambiar a `VITE_API_URL` para apuntar a una API que
- * funcione desde una IP residencial (por ejemplo en casa con un túnel).
+ * Base de la API. Por defecto es el mismo dominio (el servidor local de
+ * Express). Se puede cambiar a `VITE_API_URL` para apuntar a otra API.
  */
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 

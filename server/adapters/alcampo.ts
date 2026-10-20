@@ -1,5 +1,6 @@
 import type { Product } from '../../shared/types.js';
 import { fetchText, WafChallengeError } from '../lib/http.js';
+import { fetchWithChrome } from '../lib/browser.js';
 import { getCachedValue, readKvConfig, setCachedValue } from '../lib/kv.js';
 import { extractJsonObjectAfter } from '../lib/json.js';
 import { absoluteUrl, dedupeProducts, normalizeText, parsePrice } from '../lib/text.js';
@@ -218,6 +219,21 @@ export const alcampoAdapter: StoreAdapter = {
 
     if (Date.now() < blockedUntil) {
       throw new WafChallengeError(url);
+    }
+
+    try {
+      const html = await fetchWithChrome(url, signal);
+
+      if (isAlcampoChallenge(html)) {
+        blockedUntil = Date.now() + CHALLENGE_COOLDOWN_MS;
+        throw new WafChallengeError(url);
+      }
+
+      return parseAlcampo(html);
+    } catch (error) {
+      if (error instanceof WafChallengeError) {
+        throw error;
+      }
     }
 
     try {

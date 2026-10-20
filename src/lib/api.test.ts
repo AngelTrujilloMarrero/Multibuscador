@@ -33,7 +33,7 @@ describe('searchProducts', () => {
     );
   });
 
-  it('entiende el formato de error anidado de Vercel', async () => {
+  it('entiende el formato de error anidado del backend', async () => {
     stubResponse(
       Response.json(
         { error: { code: '404', message: 'The page could not be found' } },

@@ -23,7 +23,7 @@ interface SharedEntry {
 }
 
 /**
- * Busca en la caché compartida (Vercel KV / Upstash) y, si no hay, en la
+ * Busca en la caché compartida (Upstash/Redis) y, si no hay, en la
  * memoria de la instancia. Con KV, una sola petición a las tiendas sirve a
  * todos los usuarios: es lo que evita que el volumen dispare los bloqueos
  * anti-bot de Alcampo y Leroy Merlin.

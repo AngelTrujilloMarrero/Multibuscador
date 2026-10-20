@@ -108,24 +108,24 @@ indica qué ha pasado y el resto de tiendas sigue funcionando.
 Si una tienda está protegida, conviene abrir su web en el navegador con
 normalidad y volver a probar la búsqueda.
 
-### Proxy de scraping (variable de entorno)
+### Proxy de scraping (variables de entorno en Vercel)
 
 Como los bloqueos dependen de la IP de salida, puedes enrutar todas las
-peticiones a las tiendas por un proxy con una simple variable de entorno (el
-mismo patrón que usaste con AEMET en DeBelingo, pero la clave se queda en el
-servidor):
+peticiones a las tiendas por un proxy. Lo único que tienes que hacer es pegar la
+clave en *Vercel → Project Settings → Environment Variables* y redesplegar; la
+app se encarga de armar la URL. La clave nunca llega al navegador.
 
-```bash
-PROXY_URL_TEMPLATE=https://api.scraperapi.com?api_key={api_key}&url={url}
-PROXY_API_KEY=tu-clave
-```
+| Variable | Servicio | Nota |
+| --- | --- | --- |
+| `SCRAPER_API_KEY` | ScraperAPI | Añade `SCRAPER_RENDER_JS=true` para usar un navegador real (ayuda con WAF/captcha) |
+| `ZYTE_API_KEY` | Zyte | |
+| `SCRAPINGBEE_API_KEY` | ScrapingBee | |
+| `PROXY_URL_TEMPLATE` | Cualquiera o proxy propio | Plantilla con `{url}`, `{url_raw}` y `{api_key}`; tiene prioridad sobre las anteriores |
+| `PROXY_API_KEY` | Plantilla personalizada | |
+| `PROXY_HEADERS` | Todos | Cabeceras extra en JSON |
 
-- `{url}`: URL codificada de la tienda, `{url_raw}`: URL literal.
-- `PROXY_HEADERS` (JSON) permite añadir cabeceras, por ejemplo un token.
-- La clave nunca llega al navegador: solo la usa el backend.
-
-En Vercel se define en *Project Settings → Environment Variables*; en local, en un
-archivo `.env` (no se versiona) o exportando la variable antes de arrancar.
+En el log de la función verás `[proxy] consultas a las tiendas vía <servicio>`
+cuando está activo.
 
 ## Despliegue en Vercel
 

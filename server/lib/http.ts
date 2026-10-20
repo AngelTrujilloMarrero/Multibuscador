@@ -14,16 +14,42 @@ export interface ProxyConfig {
   template?: string;
   apiKey?: string;
   headers?: Record<string, string>;
+  provider?: string;
 }
+
+interface ProxyPreset {
+  env: string;
+  provider: string;
+  build: (apiKey: string, env: Record<string, string | undefined>) => string;
+}
+
+const PROXY_PRESETS: ProxyPreset[] = [
+  {
+    env: 'SCRAPER_API_KEY',
+    provider: 'ScraperAPI',
+    build: (apiKey, env) => {
+      const renderJs = env.SCRAPER_RENDER_JS === 'true' ? '&render_js=true' : '';
+      return `https://api.scraperapi.com?api_key=${apiKey}&url={url}${renderJs}`;
+    }
+  },
+  {
+    env: 'ZYTE_API_KEY',
+    provider: 'Zyte',
+    build: (apiKey) =>
+      `https://api.zyte.com/v1/extract?url={url}&apikey=${apiKey}`
+  },
+  {
+    env: 'SCRAPINGBEE_API_KEY',
+    provider: 'ScrapingBee',
+    build: (apiKey) =>
+      `https://app.scrapingbee.com/api/v1/?api_key=${apiKey}&url={url}`
+  }
+];
 
 export function readProxyConfig(
   env: Record<string, string | undefined> = process.env
 ): ProxyConfig | null {
   const template = env.PROXY_URL_TEMPLATE?.trim();
-
-  if (!template) {
-    return null;
-  }
 
   let headers: Record<string, string> | undefined;
 
@@ -35,11 +61,29 @@ export function readProxyConfig(
     }
   }
 
-  return {
-    template,
-    apiKey: env.PROXY_API_KEY,
-    headers
-  };
+  if (template) {
+    return {
+      template,
+      apiKey: env.PROXY_API_KEY,
+      headers,
+      provider: 'personalizado'
+    };
+  }
+
+  for (const preset of PROXY_PRESETS) {
+    const apiKey = env[preset.env]?.trim();
+
+    if (apiKey) {
+      return {
+        template: preset.build(apiKey, env),
+        apiKey,
+        headers,
+        provider: preset.provider
+      };
+    }
+  }
+
+  return null;
 }
 
 export function buildRequestUrl(
@@ -61,6 +105,20 @@ function buildHeaders(
   base: Record<string, string>
 ): Record<string, string> {
   return config?.headers ? { ...base, ...config.headers } : base;
+}
+
+let proxyLogged = false;
+
+function logProxyOnce(config: ProxyConfig | null): void {
+  if (proxyLogged) {
+    return;
+  }
+
+  proxyLogged = true;
+
+  if (config) {
+    console.log(`[proxy] consultas a las tiendas vía ${config.provider}`);
+  }
 }
 
 export class HttpError extends Error {
@@ -123,6 +181,8 @@ export async function fetchText(
   const proxy = readProxyConfig();
   const requestUrl = buildRequestUrl(url, proxy);
   const requestHeaders = buildHeaders(proxy, headers);
+
+  logProxyOnce(proxy);
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {

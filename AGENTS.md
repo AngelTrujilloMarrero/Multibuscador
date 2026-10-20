@@ -64,8 +64,12 @@ pnpm verify           # check:lines + typecheck + test + build
 | Variable | Para qué sirve |
 | --- | --- |
 | `PORT` | Puerto del servidor Express (8787 por defecto) |
-| `PROXY_URL_TEMPLATE` | Plantilla del proxy de scraping (`{url}`, `{url_raw}`, `{api_key}`) |
-| `PROXY_API_KEY` | Clave del proxy, solo en el servidor |
+| `SCRAPER_API_KEY` | Proxy ScraperAPI (arma la URL solo) |
+| `ZYTE_API_KEY` | Proxy Zyte |
+| `SCRAPINGBEE_API_KEY` | Proxy ScrapingBee |
+| `SCRAPER_RENDER_JS` | ScraperAPI con navegador real |
+| `PROXY_URL_TEMPLATE` | Plantilla personalizada (`{url}`, `{url_raw}`, `{api_key}`), prioritaria |
+| `PROXY_API_KEY` | Clave de la plantilla personalizada |
 | `PROXY_HEADERS` | Cabeceras extra del proxy en JSON |
 
 Si se define `PROXY_URL_TEMPLATE`, todas las peticiones a las tiendas pasan por

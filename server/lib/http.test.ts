@@ -86,4 +86,53 @@ describe('proxy de scraping', () => {
     );
     expect(config?.headers).toEqual({ authorization: 'Bearer token' });
   });
+
+  it('reconoce los proveedores con solo la clave', () => {
+    const config = readProxyConfig({ SCRAPER_API_KEY: 'abc' });
+
+    expect(config?.provider).toBe('ScraperAPI');
+    expect(buildRequestUrl('https://ejemplo.test/a', config)).toBe(
+      'https://api.scraperapi.com?api_key=abc&url=https%3A%2F%2Fejemplo.test%2Fa'
+    );
+  });
+
+  it('ofrece renderizado con JavaScript para ScraperAPI', () => {
+    const config = readProxyConfig({
+      SCRAPER_API_KEY: 'abc',
+      SCRAPER_RENDER_JS: 'true'
+    });
+
+    expect(buildRequestUrl('https://ejemplo.test/a', config)).toContain(
+      '&render_js=true'
+    );
+  });
+
+  it('soporta Zyte y ScrapingBee', () => {
+    expect(
+      buildRequestUrl(
+        'https://ejemplo.test/a',
+        readProxyConfig({ ZYTE_API_KEY: 'z' })
+      )
+    ).toBe(
+      'https://api.zyte.com/v1/extract?url=https%3A%2F%2Fejemplo.test%2Fa&apikey=z'
+    );
+
+    expect(
+      buildRequestUrl(
+        'https://ejemplo.test/a',
+        readProxyConfig({ SCRAPINGBEE_API_KEY: 'b' })
+      )
+    ).toBe(
+      'https://app.scrapingbee.com/api/v1/?api_key=b&url=https%3A%2F%2Fejemplo.test%2Fa'
+    );
+  });
+
+  it('prioriza la plantilla personalizada sobre los proveedores', () => {
+    const config = readProxyConfig({
+      PROXY_URL_TEMPLATE: 'https://proxy.test/?url={url_raw}',
+      SCRAPER_API_KEY: 'abc'
+    });
+
+    expect(config?.provider).toBe('personalizado');
+  });
 });

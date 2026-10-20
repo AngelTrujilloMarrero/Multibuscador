@@ -2,7 +2,7 @@ import type { Product } from '../../shared/types.js';
 import { fetchText, WafChallengeError } from '../lib/http.js';
 import { getCachedValue, readKvConfig, setCachedValue } from '../lib/kv.js';
 import { extractJsonObjectAfter } from '../lib/json.js';
-import { absoluteUrl, dedupeProducts, parsePrice } from '../lib/text.js';
+import { absoluteUrl, dedupeProducts, normalizeText, parsePrice } from '../lib/text.js';
 import type { StoreAdapter } from './types.js';
 
 const BASE_URL = 'https://www.compraonline.alcampo.es';
@@ -197,6 +197,23 @@ export const alcampoAdapter: StoreAdapter = {
   shortName: 'A',
   color: '#e30613',
   async search(query, signal) {
+    const key = `alcampo:productos:${normalizeText(query)}`;
+    const kv = readKvConfig();
+
+    const synced = await getCachedValue(key, kv);
+
+    if (synced) {
+      try {
+        const products = JSON.parse(synced) as Product[];
+
+        if (products.length > 0) {
+          return products;
+        }
+      } catch {
+        // Entrada corrupta: se sigue con la consulta directa.
+      }
+    }
+
     const url = `${BASE_URL}/search?q=${encodeURIComponent(query)}`;
 
     if (Date.now() < blockedUntil) {

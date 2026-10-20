@@ -20,7 +20,9 @@
     "check:lines": "node scripts/check-file-length.mjs",
     "verify": "pnpm check:lines && pnpm typecheck && pnpm test && pnpm build",
     "leroy:login": "tsx scripts/leroy-merlin-login.ts",
-    "leroy:sync": "tsx scripts/leroy-merlin-sync.ts"
+    "leroy:sync": "tsx scripts/leroy-merlin-sync.ts",
+    "sync": "tsx scripts/sync-store.ts",
+    "sync:login": "tsx scripts/sync-login.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

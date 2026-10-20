@@ -52,3 +52,36 @@ export const EXAMPLES = [
   'monitor 24',
   'auriculares'
 ];
+
+export interface ExternalStore {
+  id: string;
+  name: string;
+  shortName: string;
+  color: string;
+  urlTemplate: string;
+}
+
+/**
+ * Tiendas que no se comparan automáticamente (bloquean el acceso automatizado)
+ * pero a las que se puede saltar con una búsqueda ya preparada.
+ */
+export const EXTERNAL_STORES: ExternalStore[] = [
+  {
+    id: 'alcampo',
+    name: 'Alcampo',
+    shortName: 'A',
+    color: '#e30613',
+    urlTemplate: 'https://www.compraonline.alcampo.es/search?q={q}'
+  },
+  {
+    id: 'leroy-merlin',
+    name: 'Leroy Merlin',
+    shortName: 'LM',
+    color: '#78be20',
+    urlTemplate: 'https://www.leroymerlin.es/search?q={q}'
+  }
+];
+
+export function externalStoreUrl(store: ExternalStore, query: string): string {
+  return store.urlTemplate.replace('{q}', encodeURIComponent(query));
+}

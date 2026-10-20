@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import type { SearchResponse } from '../../shared/types';
 import type { SortMode } from '../lib/stores';
-import { STORE_ORDER } from '../lib/stores';
+import { EXTERNAL_STORES, STORE_ORDER } from '../lib/stores';
+import { ExternalStoreCard } from './ExternalStoreCard';
 import { StoreCard } from './StoreCard';
 import { SummaryBar } from './SummaryBar';
 
@@ -49,6 +50,23 @@ export function ResultsView({
           />
         ))}
       </div>
+
+      <section className="external-stores" aria-label="Tiendas consultadas manualmente">
+        <h3 className="external-stores__title">También puedes consultar</h3>
+        <p className="external-stores__hint">
+          Alcampo y Leroy Merlin no se comparan automáticamente: las abrimos en
+          su web para que veas precio y stock directamente.
+        </p>
+        <div className="stores-grid stores-grid--external">
+          {EXTERNAL_STORES.map((store) => (
+            <ExternalStoreCard
+              key={store.id}
+              store={store}
+              query={response.query}
+            />
+          ))}
+        </div>
+      </section>
     </section>
   );
 }

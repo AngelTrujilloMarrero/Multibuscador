@@ -51,6 +51,11 @@ export function EmptyState({ onExample }: EmptyStateProps) {
         })}
       </div>
 
+      <p className="empty__manual">
+        Alcampo y Leroy Merlin se consultan manualmente: tras buscar aparecen como
+        enlaces directos a su web.
+      </p>
+
       <div className="empty__examples">
         <span>Prueba con:</span>
         {EXAMPLES.map((example) => (

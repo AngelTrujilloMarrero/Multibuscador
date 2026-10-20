@@ -75,6 +75,36 @@ pnpm build         # Typecheck + build de producción
 pnpm verify        # Todo lo anterior en orden
 ```
 
+## Caché compartida: una petición, muchos usuarios
+
+Lalesson más importante (la misma que aplicaste a AEMET en DeBelingo): **no
+puede ser cada usuario el que pide el dato a la tienda**. Si cada visita (y cada
+instancia serverless) consulta a Alcampo o Leroy Merlin, el volumen de peticiones
+dispara sus protecciones anti-bot.
+
+Con una caché compartida (Vercel KV o Upstash) el flujo es:
+
+```
+usuario A → función Vercel → tiendas (1 petición) ─┐
+usuario B → función Vercel → caché compartida ──────┴→ misma respuesta
+usuario C → función Vercel → caché compartida
+```
+
+Las variables de entorno en Vercel (Settings → Environment Variables):
+
+| Variable | Para qué sirve |
+| --- | --- |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Vercel KV (Storage → KV) |
+| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Alternativa con Upstash |
+| `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
+
+Sin KV la app sigue funcionando con la caché en memoria de cada instancia, pero
+en serverless cada instancia nueva vuelve a preguntar a las tiendas. Cuanto más
+alto `CACHE_TTL_SECONDS`, menos peticiones salen hacia las tiendas.
+
+También se cachea el descubrimiento de productos de Leroy Merlin (24 h), para no
+volver a descargar sus sitemaps públicos en cada petición.
+
 ## Fuentes de datos por tienda
 
 | Tienda | Fuente | Formato | Protecciones |

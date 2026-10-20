@@ -2,86 +2,16 @@ import * as cheerio from 'cheerio';
 import type { Cheerio } from 'cheerio';
 import type { Product, ProductAvailability } from '../../shared/types.js';
 import { fetchText } from '../lib/http.js';
-import { tokenize } from '../lib/matching.js';
-import { loadSitemapUrls } from '../lib/sitemap.js';
-import {
-  absoluteUrl,
-  dedupeProducts,
-  normalizeText,
-  parsePrice
-} from '../lib/text.js';
+import { absoluteUrl, dedupeProducts, parsePrice } from '../lib/text.js';
+import { findFamilyUrls } from './leroy-merlin-discovery.js';
 import type { StoreAdapter } from './types.js';
 
+export { findFamilyUrls, scoreSlug } from './leroy-merlin-discovery.js';
+
 const BASE_URL = 'https://www.leroymerlin.es';
-const SEARCHDEX_URLS = [
-  `${BASE_URL}/sitemap-searchdex1.xml`,
-  `${BASE_URL}/sitemap-searchdex2.xml`
-];
-const MAX_FAMILY_PAGES = 2;
 const MAX_PRODUCT_PAGES = 5;
 
 export const STORE_NAME = 'La Laguna';
-
-function slugOf(url: string): string {
-  const last = url.split('/').pop() ?? '';
-  return last.replace(/\.html$/, '').replace(/-p$/, '');
-}
-
-export function scoreSlug(slug: string, queryTokens: string[]): number {
-  const words = normalizeText(slug.replace(/-/g, ' ')).split(' ');
-  const hits = queryTokens.filter(
-    (token) => words.some((word) => word === token || word.startsWith(token))
-  ).length;
-
-  return queryTokens.length === 0 ? 0 : hits / queryTokens.length;
-}
-
-function rankFamilyUrls(
-  locations: string[],
-  queryTokens: string[],
-  limit: number
-): string[] {
-  const scored = locations
-    .map((url) => ({ url, score: scoreSlug(slugOf(url), queryTokens) }))
-    .filter((entry) => entry.score >= 0.75)
-    .sort((left, right) => right.score - left.score);
-
-  const unique: string[] = [];
-
-  for (const entry of scored) {
-    if (unique.length >= limit) {
-      break;
-    }
-
-    if (!unique.includes(entry.url)) {
-      unique.push(entry.url);
-    }
-  }
-
-  return unique;
-}
-
-export async function findFamilyUrls(
-  query: string,
-  fetcher: (url: string) => Promise<string>
-): Promise<string[]> {
-  const queryTokens = tokenize(query);
-
-  if (queryTokens.length === 0) {
-    return [];
-  }
-
-  for (const sitemapUrl of SEARCHDEX_URLS) {
-    const locations = await loadSitemapUrls(sitemapUrl, fetcher);
-    const matches = rankFamilyUrls(locations, queryTokens, MAX_FAMILY_PAGES);
-
-    if (matches.length > 0) {
-      return matches;
-    }
-  }
-
-  return [];
-}
 
 function readImage(container: Cheerio<any>): string | null {
   const candidates = [

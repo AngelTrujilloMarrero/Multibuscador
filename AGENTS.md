@@ -64,6 +64,9 @@ pnpm verify           # check:lines + typecheck + test + build
 | Variable | Para qué sirve |
 | --- | --- |
 | `PORT` | Puerto del servidor Express (8787 por defecto) |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Caché compartida (Vercel KV) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Caché compartida (Upstash) |
+| `CACHE_TTL_SECONDS` | Vida de la caché de búsquedas (600 por defecto) |
 | `SCRAPER_API_KEY` | Proxy ScraperAPI (arma la URL solo) |
 | `ZYTE_API_KEY` | Proxy Zyte |
 | `SCRAPINGBEE_API_KEY` | Proxy ScrapingBee |
@@ -75,6 +78,10 @@ pnpm verify           # check:lines + typecheck + test + build
 Si se define `PROXY_URL_TEMPLATE`, todas las peticiones a las tiendas pasan por
 el proxy, lo que evita los bloqueos por IP de AWS WAF (Alcampo) y DataDome
 (Leroy Merlin). La clave nunca se expone al cliente.
+
+Si hay caché compartida (KV/Upstash), una sola petición a las tiendas sirve a
+todos los usuarios: es la forma más efectiva de no disparar los bloqueos. No
+añadas dependencias para la caché: `server/lib/kv.ts` habla con la API REST.
 
 ## Despliegue
 

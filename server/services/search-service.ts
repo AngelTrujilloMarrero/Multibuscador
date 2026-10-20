@@ -7,24 +7,46 @@ import { ADAPTERS } from '../adapters/registry.js';
 import type { StoreAdapter } from '../adapters/types.js';
 import { TtlCache } from '../lib/cache.js';
 import { BotProtectionError, WafChallengeError } from '../lib/http.js';
+import { getCachedValue, readCacheTtl, readKvConfig, setCachedValue } from '../lib/kv.js';
 import { rankProducts } from '../lib/matching.js';
 import { normalizeText } from '../lib/text.js';
 
-const CACHE_TTL_MS = 10 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8_000;
 
-const cache = new TtlCache<string, SearchResponse>(CACHE_TTL_MS, 100);
+const memoryCache = new TtlCache<string, SearchResponse>(600_000, 100);
 const inFlight = new Map<string, Promise<SearchResponse>>();
 
+/**
+ * Busca en la caché compartida (Vercel KV / Upstash) y, si no hay, en la
+ * memoria de la instancia. Con KV, una sola petición a las tiendas sirve a
+ * todos los usuarios: es lo que evita que el volumen dispare los bloqueos
+ * anti-bot de Alcampo y Leroy Merlin.
+ */
 export async function searchAll(query: string): Promise<SearchResponse> {
   const key = normalizeText(query);
-  const cached = cache.get(key);
+  const kv = readKvConfig();
+  const ttl = readCacheTtl();
 
-  if (cached) {
-    return { ...cached, cached: true };
+  const inMemory = memoryCache.get(key);
+
+  if (inMemory) {
+    return { ...inMemory, cached: true };
+  }
+
+  const shared = await getCachedValue(`search:${key}`, kv);
+
+  if (shared) {
+    try {
+      const parsed = JSON.parse(shared) as SearchResponse;
+      memoryCache.set(key, parsed);
+      return { ...parsed, cached: true };
+    } catch {
+      // Entrada corrupta: se ignora y se vuelve a consultar.
+    }
   }
 
   const pending = inFlight.get(key);
+
   if (pending) {
     return pending;
   }
@@ -33,7 +55,15 @@ export async function searchAll(query: string): Promise<SearchResponse> {
   inFlight.set(key, promise);
 
   const response = await promise;
-  cache.set(key, response);
+  memoryCache.set(key, response);
+
+  await setCachedValue(
+    `search:${key}`,
+    JSON.stringify(response),
+    ttl,
+    kv
+  );
+
   return response;
 }
 

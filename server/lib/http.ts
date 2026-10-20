@@ -1,13 +1,18 @@
 const DEFAULT_HEADERS = {
   'user-agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'accept-language': 'es-ES,es;q=0.9,en;q=0.6'
+  accept: 'text/html,application/xhtml+xml',
+  'accept-language': 'es-ES,es;q=0.9'
 };
 
 const JSON_HEADERS = {
   ...DEFAULT_HEADERS,
   accept: 'application/json,text/plain,*/*'
+};
+
+export const XML_HEADERS = {
+  ...DEFAULT_HEADERS,
+  accept: 'application/xml,text/xml,*/*'
 };
 
 export interface ProxyConfig {

@@ -1,8 +1,9 @@
 import * as cheerio from 'cheerio';
 import type { Cheerio } from 'cheerio';
 import type { Product, ProductAvailability } from '../../shared/types.js';
-import { fetchText } from '../lib/http.js';
-import { absoluteUrl, dedupeProducts, parsePrice } from '../lib/text.js';
+import { fetchText, XML_HEADERS } from '../lib/http.js';
+import { getCachedValue, readKvConfig } from '../lib/kv.js';
+import { absoluteUrl, dedupeProducts, normalizeText, parsePrice } from '../lib/text.js';
 import { findFamilyUrls } from './leroy-merlin-discovery.js';
 import type { StoreAdapter } from './types.js';
 
@@ -196,8 +197,26 @@ export const leroyMerlinAdapter: StoreAdapter = {
   shortName: 'LM',
   color: '#78be20',
   async search(query, signal) {
+    // Resultado recogido en casa con un navegador real (scripts/leroy-merlin-sync).
+    const synced = await getCachedValue(
+      `lm:productos:${normalizeText(query)}`,
+      readKvConfig()
+    );
+
+    if (synced) {
+      try {
+        const products = JSON.parse(synced) as Product[];
+
+        if (products.length > 0) {
+          return products;
+        }
+      } catch {
+        // Entrada corrupta: se sigue con la consulta directa.
+      }
+    }
+
     const familyUrls = await findFamilyUrls(query, (url) =>
-      fetchText(url, signal)
+      fetchText(url, signal, 2, XML_HEADERS)
     );
 
     if (familyUrls.length === 0) {

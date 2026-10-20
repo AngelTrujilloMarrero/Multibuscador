@@ -75,7 +75,10 @@ pnpm build         # Typecheck + build de producción
 pnpm verify        # Todo lo anterior en orden
 ```
 
-## Caché compartida: una petición, muchos usuarios
+## Cache compartida: una petición, muchos usuarios
+
+> 📄 Plan 100 % gratuito (KV, Alcampo, Leroy Merlin y servicios externos con
+> plan gratis) en **[PLAN-GRATUITO.md](PLAN-GRATUITO.md)**.
 
 Lalesson más importante (la misma que aplicaste a AEMET en DeBelingo): **no
 puede ser cada usuario el que pide el dato a la tienda**. Si cada visita (y cada

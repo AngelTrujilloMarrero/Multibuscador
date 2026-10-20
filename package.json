@@ -18,7 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:lines": "node scripts/check-file-length.mjs",
-    "verify": "pnpm check:lines && pnpm typecheck && pnpm test && pnpm build"
+    "verify": "pnpm check:lines && pnpm typecheck && pnpm test && pnpm build",
+    "leroy:login": "tsx scripts/leroy-merlin-login.ts",
+    "leroy:sync": "tsx scripts/leroy-merlin-sync.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

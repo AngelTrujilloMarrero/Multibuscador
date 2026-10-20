@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchText, HttpError, WafChallengeError } from './http';
+import {
+  buildRequestUrl,
+  fetchText,
+  HttpError,
+  readProxyConfig,
+  WafChallengeError
+} from './http';
 
 function signal(): AbortSignal {
   return new AbortController().signal;
@@ -47,5 +53,37 @@ describe('fetchText', () => {
     await expect(
       fetchText('https://ejemplo.test', signal())
     ).rejects.toBeInstanceOf(HttpError);
+  });
+});
+
+describe('proxy de scraping', () => {
+  it('no modifica la URL cuando no hay plantilla', () => {
+    expect(buildRequestUrl('https://ejemplo.test/a', null)).toBe(
+      'https://ejemplo.test/a'
+    );
+    expect(readProxyConfig({})).toBeNull();
+  });
+
+  it('sustituye la URL codificada y la clave de API', () => {
+    const config = readProxyConfig({
+      PROXY_URL_TEMPLATE: 'https://proxy.test/?key={api_key}&url={url}',
+      PROXY_API_KEY: 'secreto'
+    });
+
+    expect(buildRequestUrl('https://ejemplo.test/a b', config)).toBe(
+      'https://proxy.test/?key=secreto&url=https%3A%2F%2Fejemplo.test%2Fa%20b'
+    );
+  });
+
+  it('admite la URL sin codificar y cabeceras extra', () => {
+    const config = readProxyConfig({
+      PROXY_URL_TEMPLATE: 'https://proxy.test/?url={url_raw}',
+      PROXY_HEADERS: '{"authorization":"Bearer token"}'
+    });
+
+    expect(buildRequestUrl('https://ejemplo.test/a', config)).toBe(
+      'https://proxy.test/?url=https://ejemplo.test/a'
+    );
+    expect(config?.headers).toEqual({ authorization: 'Bearer token' });
   });
 });

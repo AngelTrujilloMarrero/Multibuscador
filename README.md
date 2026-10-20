@@ -108,6 +108,42 @@ indica qué ha pasado y el resto de tiendas sigue funcionando.
 Si una tienda está protegida, conviene abrir su web en el navegador con
 normalidad y volver a probar la búsqueda.
 
+### Proxy de scraping (variable de entorno)
+
+Como los bloqueos dependen de la IP de salida, puedes enrutar todas las
+peticiones a las tiendas por un proxy con una simple variable de entorno (el
+mismo patrón que usaste con AEMET en DeBelingo, pero la clave se queda en el
+servidor):
+
+```bash
+PROXY_URL_TEMPLATE=https://api.scraperapi.com?api_key={api_key}&url={url}
+PROXY_API_KEY=tu-clave
+```
+
+- `{url}`: URL codificada de la tienda, `{url_raw}`: URL literal.
+- `PROXY_HEADERS` (JSON) permite añadir cabeceras, por ejemplo un token.
+- La clave nunca llega al navegador: solo la usa el backend.
+
+En Vercel se define en *Project Settings → Environment Variables*; en local, en un
+archivo `.env` (no se versiona) o exportando la variable antes de arrancar.
+
+## Despliegue en Vercel
+
+El repositorio ya incluye lo necesario para publicar la web y la API en Vercel:
+
+- `vercel.json` define el build de Vite, la función `api/[...path].ts` (Express
+  completo en una sola función serverless) y el fallback de la SPA.
+- `api/[...path].ts` exporta la app Express, de forma que `/api/search` y
+  `/api/health` funcionan en el mismo dominio que la web.
+
+Al ser funciones serverless, la caché en memoria y el deduplicado de
+peticiones solo viven mientras la instancia esté caliente: para un volumen alto
+conviene añadir una caché externa (Vercel KV o Redis).
+
+Como las funciones salen desde IPs de datacenter, es probable que Alcampo y
+Leroy Merlin muestren el aviso de bloqueo con más frecuencia que en local. La
+variable `PROXY_URL_TEMPLATE` es la forma más sencilla de evitarlo.
+
 ## API
 
 ### `GET /api/health`

@@ -59,6 +59,27 @@ pnpm start            # Servir la build en :8787
 pnpm verify           # check:lines + typecheck + test + build
 ```
 
+## Variables de entorno
+
+| Variable | Para qué sirve |
+| --- | --- |
+| `PORT` | Puerto del servidor Express (8787 por defecto) |
+| `PROXY_URL_TEMPLATE` | Plantilla del proxy de scraping (`{url}`, `{url_raw}`, `{api_key}`) |
+| `PROXY_API_KEY` | Clave del proxy, solo en el servidor |
+| `PROXY_HEADERS` | Cabeceras extra del proxy en JSON |
+
+Si se define `PROXY_URL_TEMPLATE`, todas las peticiones a las tiendas pasan por
+el proxy, lo que evita los bloqueos por IP de AWS WAF (Alcampo) y DataDome
+(Leroy Merlin). La clave nunca se expone al cliente.
+
+## Despliegue
+
+- **Vercel**: `vercel.json` + `api/[...path].ts` publican la web y la API en el
+  mismo dominio. En serverless la caché en memoria solo vive en instancias
+  calientes.
+- **Local**: `pnpm dev` o `pnpm build && pnpm start`. Es la opción con menos
+  bloqueos porque sale desde una IP residencial.
+
 ## Estructura
 
 ```text

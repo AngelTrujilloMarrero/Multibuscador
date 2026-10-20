@@ -10,6 +10,59 @@ const JSON_HEADERS = {
   accept: 'application/json,text/plain,*/*'
 };
 
+export interface ProxyConfig {
+  template?: string;
+  apiKey?: string;
+  headers?: Record<string, string>;
+}
+
+export function readProxyConfig(
+  env: Record<string, string | undefined> = process.env
+): ProxyConfig | null {
+  const template = env.PROXY_URL_TEMPLATE?.trim();
+
+  if (!template) {
+    return null;
+  }
+
+  let headers: Record<string, string> | undefined;
+
+  if (env.PROXY_HEADERS) {
+    try {
+      headers = JSON.parse(env.PROXY_HEADERS) as Record<string, string>;
+    } catch {
+      headers = undefined;
+    }
+  }
+
+  return {
+    template,
+    apiKey: env.PROXY_API_KEY,
+    headers
+  };
+}
+
+export function buildRequestUrl(
+  url: string,
+  config: ProxyConfig | null
+): string {
+  if (!config?.template) {
+    return url;
+  }
+
+  return config.template
+    .replaceAll('{url}', encodeURIComponent(url))
+    .replaceAll('{url_raw}', url)
+    .replaceAll('{api_key}', config.apiKey ?? '');
+}
+
+function buildHeaders(
+  config: ProxyConfig | null,
+  base: Record<string, string>
+): Record<string, string> {
+  return config?.headers ? { ...base, ...config.headers } : base;
+}
+
 export class HttpError extends Error {
   constructor(
     public readonly status: number,
@@ -67,13 +120,16 @@ export async function fetchText(
   headers: Record<string, string> = DEFAULT_HEADERS
 ): Promise<string> {
   let lastError: unknown;
+  const proxy = readProxyConfig();
+  const requestUrl = buildRequestUrl(url, proxy);
+  const requestHeaders = buildHeaders(proxy, headers);
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const response = await fetch(requestUrl, {
         signal,
         redirect: 'follow',
-        headers
+        headers: requestHeaders
       });
 
       if (isChallenge(response)) {

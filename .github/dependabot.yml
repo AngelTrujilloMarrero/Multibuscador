@@ -9,25 +9,12 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 10
     reviewers:
-      - "AngelTrujilloMarrero"
+      - "atrujimar"
     labels:
       - "dependencies"
       - "automated"
+    # Solo patch y minor (sin major)
     ignore:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Madrid"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "AngelTrujilloMarrero"
-    labels:
-      - "dependencies"
-      - "automated"
